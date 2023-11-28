@@ -1,13 +1,9 @@
-from inc import *
-from engine.scene_manager import *
-
+from engine import *
+from characters.player import *
 
 class Game(Scene):
-	def __init__(self):
-		pass
-
-	def on_create(self):
-		print("Create game")
+	def __init__(self, surface: pygame.Surface):
+		self.player = Player(surface)
 
 	def on_entry(self):
 		print("Entered game")
@@ -16,8 +12,8 @@ class Game(Scene):
 		print("Game exited")
 
 	def on_event(self, event: pygame.event.Event):
-		print("Game event")
+		self.player.poll_event(event)
 
 	def on_update(self, dt: float):
-		print("Game update")
+		self.player.update(dt)
 

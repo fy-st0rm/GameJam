@@ -1,11 +1,7 @@
-from inc import *
-from engine.log import *
+from engine import *
 
 
 class Scene:
-	def on_create(self):
-		raise Exception("on_create hasnt been implemented yet.")
-
 	def on_entry(self):
 		raise Exception("on_entry hasnt been implemented yet.")
 
@@ -25,7 +21,6 @@ class SceneManager:
 		self.scenes: dict[str, Scene] = {}
 
 	def add(self, name: str, scene: Scene):
-		scene.on_create()
 		self.scenes.update({ name: scene })
 
 	def switch(self, name: str):

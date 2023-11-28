@@ -1,6 +1,4 @@
-from inc import *
-from engine.scene_manager import *
-
+from engine import *
 from scenes.game import Game
 
 WIDTH  = 800
@@ -20,16 +18,23 @@ class Main:
 		self.clock = pygame.time.Clock()
 
 		self.scene_manager = SceneManager()
-		self.scene_manager.add("game", Game())
+		self.scene_manager.add("game", Game(self.screen))
 		self.scene_manager.switch("game")
 
 	def run(self):
+		last_time = time.time()
 		while self.running:
+
+			# Calculating delta time
+			dt = time.time() - last_time
+			dt *= self.fps
+			last_time = time.time()
+
 			self.screen.fill((165, 165, 165))
 
 			self.poll_events()
 
-			self.scene_manager.update(0.0)
+			self.scene_manager.update(dt)
 
 			self.clock.tick(self.fps)
 			pygame.display.update()
