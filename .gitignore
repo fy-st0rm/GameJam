@@ -1,2 +1,4 @@
 venv
 src/__pycache__
+src/engine/__pycache__
+src/scenes/__pycache__
