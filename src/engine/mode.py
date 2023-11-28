@@ -1,7 +1,5 @@
 from engine import *
 
-MODE_BASE = "BASE"
-
 
 class Mode:
 	def __init__(self, name):
@@ -38,6 +36,40 @@ class Mode:
 		return self
 
 
+class ModeManager:
+	def __init__(self):
+		self.modes: dict[str, Mode] = {}
+		self.curr_mode: Mode = None
+		self.default = ""
+
+		self.time = 0
+
+	def get(self) -> Mode:
+		return self.curr_mode
+
+	def add(self, mode: Mode, default = False):
+		self.modes.update({ mode.name: mode })
+
+		if default:
+			self.curr_mode = mode
+			self.default = mode.name
+
+	def switch(self, name: str):
+		self.curr_mode = self.modes[name]
+
+		if self.curr_mode.time != 0:
+			self.time = int(time.time())
+
+	def update(self):
+		if not self.curr_mode.time:
+			return
+
+		if int(time.time()) - self.time >= self.curr_mode.time:
+			self.switch(self.default)
+
+
+
+MODE_BASE = "BASE"
 def base_mode() -> Mode:
 	return (
 		Mode(MODE_BASE)

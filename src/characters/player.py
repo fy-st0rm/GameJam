@@ -12,21 +12,22 @@ class Player:
 			"down" : False
 		}
 
-		self.modes: dict[str, Mode] = {}
-		self.modes.update({ MODE_BASE: base_mode() })
-
-		self.curr_mode: Mode = self.modes[MODE_BASE]
+		self.mode_manager = ModeManager()
+		self.mode_manager.add(base_mode(), default = True)
 
 	def update(self, dt: float):
+		self.mode_manager.update()
+		curr_mode = self.mode_manager.get()
+
 		vel = [0, 0]
 		if self.dirs["up"]:
-			vel[1] -= self.curr_mode.speed * dt
+			vel[1] -= curr_mode.speed * dt
 		if self.dirs["down"]:
-			vel[1] += self.curr_mode.speed * dt
+			vel[1] += curr_mode.speed * dt
 		if self.dirs["left"]:
-			vel[0] -= self.curr_mode.speed * dt
+			vel[0] -= curr_mode.speed * dt
 		if self.dirs["right"]:
-			vel[0] += self.curr_mode.speed * dt
+			vel[0] += curr_mode.speed * dt
 
 		self.rect.x += vel[0] * dt
 		self.rect.y += vel[1] * dt
