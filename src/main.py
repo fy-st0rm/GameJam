@@ -1,5 +1,6 @@
 from engine import *
 from scenes.game import Game
+from scenes.menu import Menu
 
 WIDTH  = 800
 HEIGHT = 600
@@ -17,9 +18,12 @@ class Main:
 		self.running = True
 		self.clock = pygame.time.Clock()
 
+		self.ui_manager = pygame_gui.UIManager((self.width, self.height))
+
 		self.scene_manager = SceneManager()
-		self.scene_manager.add("game", Game(self.screen))
-		self.scene_manager.switch("game")
+		self.scene_manager.add("menu", Menu(self.screen, self.ui_manager, self.scene_manager))
+		self.scene_manager.add("game", Game(self.screen, self.scene_manager))
+		self.scene_manager.switch("menu")
 
 	def run(self):
 		last_time = time.time()
@@ -30,13 +34,16 @@ class Main:
 			dt *= self.fps
 			last_time = time.time()
 
-			self.screen.fill((165, 165, 165))
+			self.screen.fill((0, 0, 0))
 
 			self.poll_events()
 
-			self.scene_manager.update(dt)
+			t = self.clock.tick(self.fps) / 1000.0
 
-			self.clock.tick(self.fps)
+			self.scene_manager.update(dt)
+			self.ui_manager.update(t)
+			self.ui_manager.draw_ui(self.screen)
+
 			pygame.display.update()
 
 	def poll_events(self):
@@ -45,12 +52,14 @@ class Main:
 				self.running = False
 
 			self.scene_manager.poll_event(event)
+			self.ui_manager.process_events(event)
 
 	def quit(self):
 		self.scene_manager.quit()
 
 
 if __name__ == "__main__":
+	pygame.init()
 	main = Main(WIDTH, HEIGHT, FPS)
 	main.run()
 	main.quit()
