@@ -6,7 +6,7 @@ class Mode:
 		self.name       = name
 		self.health     = 100
 		self.attack_dmg = 100
-		self.speed      = 5
+		self.speed      = 2
 		self.time       = 0    # 0 = infinity
 
 	def __str__(self) -> str:

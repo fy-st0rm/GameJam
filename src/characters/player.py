@@ -4,7 +4,7 @@ class Player:
 	def __init__(self, surface: pygame.Surface):
 		self.surface = surface
 
-		self.rect = pygame.Rect(0, 0, 100, 100)
+		self.rect = pygame.Rect(0, 0, 16, 16)
 		self.dirs = {
 			"left" : False,
 			"right": False,
