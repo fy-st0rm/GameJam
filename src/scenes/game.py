@@ -6,7 +6,9 @@ class Game(Scene):
 		self.surface = surface
 		self.scene_manager = scene_manager
 
-		self.player = Player(self.surface)
+		self.game_surface = pygame.Surface((300, 188))
+
+		self.player = Player(self.game_surface)
 
 	def on_entry(self):
 		print("Entered game")
@@ -22,6 +24,14 @@ class Game(Scene):
 				self.scene_manager.switch("menu")
 
 	def on_update(self, dt: float):
-		self.surface.fill((0, 0, 0))
+		self.game_surface.fill((165, 165, 165))
 		self.player.update(dt)
+
+		self.surface.blit(
+			pygame.transform.scale(
+				self.game_surface,
+				(self.surface.get_width(), self.surface.get_height())
+			),
+			(0, 0)
+		)
 
