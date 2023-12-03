@@ -2,10 +2,10 @@ from engine import *
 from characters.selection_box import *
 
 class Game(Scene):
-	def __init__(self, surface: pygame.Surface, ui_manager: pygame_gui.UIManager):
+	def __init__(self, surface: pygame.Surface, ui_manager: pygame_gui.UIManager, open_file, new_map_name):
 		self.ui_manager = ui_manager
 		self.surface = surface
-		self.selection_box = SBox(surface)
+		self.selection_box = SBox(surface, open_file, new_map_name)
 		
 
 	def on_entry(self):
