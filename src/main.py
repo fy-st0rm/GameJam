@@ -13,6 +13,8 @@ class Main:
 		self.height = height
 		self.fps    = fps
 
+		self.scale = 4
+
 		self.screen = pygame.display.set_mode((self.width, self.height))
 		
 		self.running = True
@@ -21,7 +23,7 @@ class Main:
 		self.scene_manager = SceneManager()
 		self.ui_manager = pygame_gui.UIManager((self.width, self.height))
 
-		self.back_surface = pygame.Surface((self.width/4,self.height/4), pygame.SRCALPHA)
+		self.back_surface = pygame.Surface((self.width,self.height))
 
 		self.scene_manager.add("game", Game(self.back_surface, self.ui_manager))
 		self.scene_manager.switch("game")
@@ -29,23 +31,21 @@ class Main:
 	def run(self):
 		last_time = time.time()
 		while self.running:
+
+			self.screen.fill((0,0,0,0))
 			
 			# Calculating delta time
 			dt = time.time() - last_time
 			dt *= self.fps
 			last_time = time.time()
-
-			self.back_surface.fill((145, 240, 255))
-			
-
 			self.poll_events()
 
-			self.scene_manager.update(dt)
-			self.scene_manager.update(dt)
+			self.scene_manager.update(dt,self.scale)
 			self.ui_manager.update(dt)
 
 			self.clock.tick(self.fps)
-			self.screen.blit(pygame.transform.scale(self.back_surface, (self.width, self.height)), (0, 0))
+			
+			self.screen.blit(pygame.transform.scale(self.back_surface, (self.width / self.scale, self.height/ self.scale)), (0, 0))
 			self.ui_manager.draw_ui(self.back_surface)
 			pygame.display.update()
 
@@ -53,6 +53,14 @@ class Main:
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				self.running = False
+			if event.type == pygame.MOUSEWHEEL:
+				if event.y > 0:
+					self.scale = self.scale / 2
+					
+				if event.y < 0:
+					self.scale = self.scale * 2
+					
+
 
 			self.scene_manager.poll_event(event)
 			self.ui_manager.process_events(event)

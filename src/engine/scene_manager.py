@@ -8,7 +8,7 @@ class Scene:
 	def on_event(self, event: pygame.event.Event):
 		raise Exception("on_event hasnt been implemented yet.")
 
-	def on_update(self, dt: float):
+	def on_update(self, dt: float, scale):
 		raise Exception("on_update hasnt been implemented yet.")
 
 	def on_exit(self):
@@ -34,12 +34,12 @@ class SceneManager:
 		self.curr_scene = self.scenes[name]
 		self.curr_scene.on_entry()
 
-	def update(self, dt: float):
+	def update(self, dt: float, scale):
 		if not self.curr_scene:
 			log_error("Current scene not set. use switch method to switch to a scene.")
 			return
 
-		self.curr_scene.on_update(dt)
+		self.curr_scene.on_update(dt, scale)
 
 	def poll_event(self, event: pygame.event.Event):
 		if not self.curr_scene:

@@ -17,8 +17,8 @@ class SBox:
 		self.mode_manager = ModeManager()
 		self.mode_manager.add(base_mode(), default = True)
 
-		self.map_w = 10
-		self.map_h = 10
+		self.map_w = 100
+		self.map_h = 100
 
 		self.map_grid = [[0 for i in range(self.map_w)] for y in range(self.map_h)]
 		self.drawing = False
@@ -30,15 +30,14 @@ class SBox:
 
 
 
-	def update(self, dt: float):
+	def update(self, dt: float, scale):
 		mouseX = pygame.mouse.get_pos()[0]
 		mouseY = pygame.mouse.get_pos()[1]
 
-		self.px = int((mouseX/4)/16)
-		self.py = int((mouseY/4)/16)
-		
-		self.rect.x = self.px*16
-		self.rect.y = self.py*16
+		self.px = int((mouseX*scale)/16)
+		self.py = int((mouseY*scale)/16)
+		self.rect.x = self.px*scale*scale
+		self.rect.y = self.py*scale*scale
 
 		self.render()
 
@@ -56,12 +55,12 @@ class SBox:
 			if event.key == pygame.K_d: self.dirs["right"] = False
 		
 		elif event.type == pygame.MOUSEBUTTONDOWN:
-			
+			print(event.button)
 			if event.button == 1:
 				self.drawing = True
 				self.erasing = False
 				self.change_map_grid(1)
-			else:
+			elif event.button == 3:
 				self.drawing = False
 				self.erasing = True
 				self.change_map_grid(0)
@@ -84,15 +83,7 @@ class SBox:
 
 
 	def render(self):
-		os.system('cls')
-
-		for r in range(len(self.map_grid)):
-			for c in range(len(self.map_grid[r])):
-				print(self.map_grid[c][r], end="")
-				if c >= (len(self.map_grid[r]) - 1):
-					print(" ")
-
-		pygame.draw.rect(self.surface, (74, 74, 74, 5), self.rect)
+		pygame.draw.rect(self.surface, (74, 74, 74, 100), self.rect)
 
 		for r in range(len(self.map_grid)):
 			for c in range(len(self.map_grid[r])):
