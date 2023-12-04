@@ -15,13 +15,20 @@ class Player:
 		self.mode_manager = ModeManager()
 		self.mode_manager.add(base_mode(), default = True)
 
+		# Player sprite
+		self.player_width = 32
+		self.player_height = 32
 		self.player_sprite = SpriteSheet("assets/player.png")
 
 		self.animator = Animator()
-		self.animator.add("idle", self.player_sprite.load_strip([0, 0, 16, 16], 2), 0.5)
-		self.animator.add("walk", self.player_sprite.images_at([
-			[0, 32, 16, 16], [16, 32, 16, 16], [0, 48, 16, 16]
-		]), 1)
+		self.anime_speed = 1
+		self.animator.add("back", "idle", self.player_sprite.load_strip(pygame.Rect(0, 0, self.player_width, self.player_height), 6), self.anime_speed)
+		self.animator.add("back", "walk", self.player_sprite.load_strip(pygame.Rect(0, 1, self.player_width, self.player_height), 8), self.anime_speed)
+		self.animator.add("front", "idle", self.player_sprite.load_strip(pygame.Rect(0, 2, self.player_width, self.player_height), 6), self.anime_speed)
+		self.animator.add("front", "walk", self.player_sprite.load_strip(pygame.Rect(0, 3, self.player_width, self.player_height), 8), self.anime_speed)
+
+		self.dir = "front"
+		self.state = "idle"
 
 	def update(self, dt: float):
 		self.mode_manager.update()
@@ -30,19 +37,23 @@ class Player:
 		vel = [0, 0]
 		if self.dirs["up"]:
 			vel[1] -= curr_mode.speed * dt
-			self.animator.switch("walk")
+			self.dir = "back"
+			self.state = "walk"
 		if self.dirs["down"]:
 			vel[1] += curr_mode.speed * dt
-			self.animator.switch("walk")
+			self.dir = "front"
+			self.state = "walk"
 		if self.dirs["left"]:
 			vel[0] -= curr_mode.speed * dt
-			self.animator.switch("walk")
+			self.state = "walk"
 		if self.dirs["right"]:
 			vel[0] += curr_mode.speed * dt
-			self.animator.switch("walk")
+			self.state = "walk"
 
 		if not self.dirs["up"] and not self.dirs["down"] and not self.dirs["left"] and not self.dirs["right"]:
-			self.animator.switch("idle")
+			self.state = "idle"
+
+		self.animator.switch(self.dir, self.state)
 
 		self.rect.x += vel[0]
 		self.rect.y += vel[1]
