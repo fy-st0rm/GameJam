@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 
 # Configs
-WINDOW_WIDTH  = 800
+WINDOW_WIDTH	= 800
 WINDOW_HEIGHT = 600
 
 DISPLAY_WIDTH  = WINDOW_WIDTH / 3
@@ -20,12 +20,17 @@ SPRITE_COLOR_KEY = (255, 0, 255)
 SPRITE_SIZE = 16
 FPS = 60
 
+GUN_DIST = 15
+GUN_LEN  = 10
+GUN_WIDTH = 1
+GUN_COLOR = (255, 0, 0)
+
 
 # Inits
 pg.init()
 
-screen     = pg.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-display    = pg.Surface((DISPLAY_WIDTH, DISPLAY_HEIGHT))
+screen = pg.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+display = pg.Surface((DISPLAY_WIDTH, DISPLAY_HEIGHT))
 ui_surface = pg.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
 
 ui_manager = pgui.UIManager((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -62,6 +67,16 @@ def menu_hide():
 	quit_button.hide()
 
 
+# Math
+def clamp(n, min, max): 
+	if n < min:
+		return min
+	elif n > max:
+		return max
+	else:
+		return n
+
+
 # Particle
 @dataclass
 class Particle:
@@ -80,7 +95,7 @@ def particle_add(
 	amt: int
 ):
 	for i in range(amt):
-		particles.append(Particle( pos, vel, col, time))
+		particles.append(Particle(pos, vel, col, time))
 
 def particle_draw():
 	for p in particles:
@@ -107,11 +122,6 @@ def sprite_sheet_get(rect: pg.Rect) -> pg.Surface:
 	return sprite
 
 
-# Math
-def walk_curve(amp: float, freq: float, t: float) -> float:
-	return amp * math.sin(freq * math.radians(t))
-
-
 # Player
 player_sprite = sprite_sheet_get(pg.Rect(2, 0, SPRITE_SIZE, SPRITE_SIZE))
 player_rect = pg.Rect(0, 0, SPRITE_SIZE, SPRITE_SIZE)
@@ -124,6 +134,29 @@ player_movement = {
 	"up"   : False,
 	"down" : False
 }
+
+def walk_curve(amp: float, freq: float, t: float) -> float:
+	return amp * math.sin(freq * math.radians(t))
+
+
+# Gun
+gun_dist  = GUN_DIST
+gun_len   = GUN_LEN
+gun_width = GUN_WIDTH
+gun_color = GUN_COLOR
+gun_kickback = 5
+gun_fire = False
+gun_tick = 0
+
+def gun_interpolate(src: float, dest: float, speed: float) -> float:
+	if src == dest: return src
+
+	if src < dest:
+		src += speed
+	elif src > dest:
+		src -= speed
+
+	return src
 
 
 # Main loop
@@ -156,9 +189,16 @@ while running:
 		player_rect.x += vel[0]
 		player_rect.y += vel[1]
 
+		# Player walk animation and particle
+		p_tmp_rect = player_rect.copy()
 		if vel[0] or vel[1]:
 			player_walk_curve = walk_curve(1.5, 15, player_tick)
 			player_tick += 1
+
+			if vel[0]:
+				p_tmp_rect.y += player_walk_curve
+			elif vel[1]:
+				p_tmp_rect.x += player_walk_curve
 
 			feet = [player_rect.x + player_rect.w / 2, player_rect.y + player_rect.h]
 			particle_add(
@@ -170,9 +210,51 @@ while running:
 			player_tick = 0
 			player_walk_curve = 0
 
-		display.blit(player_sprite, (player_rect.x, player_rect.y + player_walk_curve))
+		# Weapon Holding
+		mp = pg.mouse.get_pos()
+		mp = [
+			mp[0] / WINDOW_WIDTH * DISPLAY_WIDTH,
+			mp[1] / WINDOW_HEIGHT * DISPLAY_HEIGHT
+		]
+		center = [
+			player_rect.x + player_rect.w / 2,
+			player_rect.y + player_rect.h / 2
+		]
 
-		# Particles
+		P = abs(mp[1] - center[1])
+		B = abs(mp[0] - center[0])
+		angle = math.degrees(math.atan2(P, B))
+
+		# Angle resolution
+		if mp[0] < center[0] and mp[1] < center[1]:
+			angle = 180 + angle
+		elif mp[0] < center[0] and mp[1] > center[1]:
+			angle = 180 - angle
+		elif mp[0] > center[0] and mp[1] < center[1]:
+			angle = 360 - angle
+		else:
+			angle = 360 + angle
+
+		# Calculating gun position
+		gun_start = [
+			center[0] + gun_dist * math.cos(math.radians(angle)),
+			center[1] + gun_dist * math.sin(math.radians(angle))
+		]
+
+		gun_end = [
+			gun_start[0] + gun_len * math.cos(math.radians(angle)),
+			gun_start[1] + gun_len * math.sin(math.radians(angle))
+		]
+
+		# Firing
+		if gun_fire:
+			gun_dist = gun_interpolate(gun_dist, GUN_DIST - gun_kickback, 1)
+		else:
+			gun_dist = gun_interpolate(gun_dist, GUN_DIST, 1)
+
+		# Draw
+		display.blit(player_sprite, (p_tmp_rect.x, p_tmp_rect.y))
+		pg.draw.line(display, gun_color, gun_start, gun_end, gun_width)
 		particle_draw()
 
 		screen.blit(pg.transform.scale(display, (WINDOW_WIDTH, WINDOW_HEIGHT)), (0, 0))
@@ -207,6 +289,13 @@ while running:
 			elif event.key == pg.K_a: player_movement["left"]  = False
 			elif event.key == pg.K_s: player_movement["down"]  = False
 			elif event.key == pg.K_d: player_movement["right"] = False
+
+		elif event.type == pg.MOUSEBUTTONDOWN:
+			if pg.mouse.get_pressed()[0]:
+				gun_fire = True
+		elif event.type == pg.MOUSEBUTTONUP:
+			if not pg.mouse.get_pressed()[0]:
+				gun_fire = False
 
 		# UI
 		elif event.type == pgui.UI_BUTTON_PRESSED:
