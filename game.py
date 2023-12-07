@@ -13,7 +13,7 @@ WINDOW_HEIGHT = 600
 DISPLAY_WIDTH  = WINDOW_WIDTH / 3
 DISPLAY_HEIGHT = WINDOW_HEIGHT / 3
 
-BG_COLOR = (0, 165, 165)
+BG_COLOR = (36, 36, 36)
 
 SPRITE_SHEET = "assets/sprites.png"
 SPRITE_COLOR_KEY = (255, 0, 255)
@@ -84,6 +84,7 @@ class Particle:
 	vel: list[float, float]
 	col: list[float, float, float]
 	time: float
+	radius: float
 
 particles: list[Particle] = []
 
@@ -92,18 +93,20 @@ def particle_add(
 	col: list[float, float, float],
 	vel: list[float, float],
 	time: float,
-	amt: int
+	amt: int,
+	radius: float
 ):
 	for i in range(amt):
-		particles.append(Particle(pos, vel, col, time))
+		particles.append(Particle(pos, vel, col, time, radius))
 
 def particle_draw():
 	for p in particles:
 		p.pos[0] += p.vel[0]
 		p.pos[1] += p.vel[1]
 		p.time -= 0.1
+		p.radius -= 0.2
 
-		pg.draw.circle(display, p.col, p.pos, p.time)
+		pg.draw.circle(display, p.col, p.pos, p.radius)
 		if p.time <= 0:
 			particles.remove(p)
 
@@ -158,6 +161,39 @@ def gun_interpolate(src: float, dest: float, speed: float) -> float:
 
 	return src
 
+def draw_muzzle_flash(position: list[float]):
+	mp = pg.mouse.get_pos()
+	mp = [
+		mp[0] / WINDOW_WIDTH * DISPLAY_WIDTH,
+		mp[1] / WINDOW_HEIGHT * DISPLAY_HEIGHT
+	]
+	pg.draw.line(display, (255,255,255), position, mp, 1)
+	# YELLOW_NOZZLE_FLASH_FORWARD
+	particle_add(
+			position, (240, 206, 65),
+			[1, 0],
+			1, random.choices([0, 1], weights=(70,30))[0], 3
+	)
+	# RED_NOZZLE_FLASH_FORWARD
+	particle_add(
+			position, (255, 90, 0),
+			[1, 0],
+			2, random.choices([0, 1], weights=(70,30))[0], 3
+	)
+
+	# RED_NOZZLE_UP_DOWN
+	particle_add(
+			position, (255, 90, 0),
+			[1, random.randint(-1,1)],
+			2, random.choices([0, 1], weights=(70,30))[0], 2
+	)
+
+	# YELLOW_NOZZLE_UP_DOWN
+	particle_add(
+			position, (240, 206, 65),
+			[1, random.randint(-1,1)],
+			1, random.choices([0, 1], weights=(70,30))[0], 2
+	)
 
 # Main loop
 game = False
@@ -191,6 +227,7 @@ while running:
 
 		# Player walk animation and particle
 		p_tmp_rect = player_rect.copy()
+		draw_muzzle_flash([100,100])
 		if vel[0] or vel[1]:
 			player_walk_curve = walk_curve(1.5, 15, player_tick)
 			player_tick += 1
@@ -200,11 +237,17 @@ while running:
 			elif vel[1]:
 				p_tmp_rect.x += player_walk_curve
 
-			feet = [player_rect.x + player_rect.w / 2, player_rect.y + player_rect.h]
+			feet = [player_rect.x + player_rect.w / 2, player_rect.y + player_rect.h - 2]
+
 			particle_add(
 				feet, (165, 165, 165),
-				[random.randint(-1, 1), random.randint(-1, 1)],
-				3, random.randint(0, 1)
+				[random.randint(-1, 1), 0],
+				4, random.choices([0, 1], weights=(70,30))[0], 3
+			)
+			particle_add(
+				feet, (110, 110, 110),
+				[random.randint(-1, 1), 0],
+				4, random.choices([0, 1], weights=(70,30))[0], 3
 			)
 		else:
 			player_tick = 0
@@ -253,9 +296,9 @@ while running:
 			gun_dist = gun_interpolate(gun_dist, GUN_DIST, 1)
 
 		# Draw
+		particle_draw()
 		display.blit(player_sprite, (p_tmp_rect.x, p_tmp_rect.y))
 		pg.draw.line(display, gun_color, gun_start, gun_end, gun_width)
-		particle_draw()
 
 		screen.blit(pg.transform.scale(display, (WINDOW_WIDTH, WINDOW_HEIGHT)), (0, 0))
 	
