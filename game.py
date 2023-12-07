@@ -23,6 +23,10 @@ FPS = 60
 GUN_DIST = 15
 GUN_LEN  = 10
 GUN_WIDTH = 1
+GUN_RANGE = 1000
+GUN_KICKBACK = 5
+GUN_MAX_TIMEOUT = 5
+GUN_FIRERATE = 0.5
 GUN_COLOR = (255, 0, 0)
 
 
@@ -75,6 +79,34 @@ def clamp(n, min, max):
 		return max
 	else:
 		return n
+
+def dist(start: list[float, float], end: list[float, float]) -> float:
+	return math.sqrt((end[0] - start[0])**2 + (end[1] - start[1])**2)
+
+def get_mouse_pos() -> list[float, float]:
+	mp = pg.mouse.get_pos()
+	mp = [
+		mp[0] / WINDOW_WIDTH * DISPLAY_WIDTH,
+		mp[1] / WINDOW_HEIGHT * DISPLAY_HEIGHT
+	]
+	return mp
+
+def calc_angle(start_pos: list[float, float], end_pos: list[float, float]) -> float:
+		P = abs(end_pos[1] - start_pos[1])
+		B = abs(end_pos[0] - start_pos[0])
+		angle = math.degrees(math.atan2(P, B))
+
+		# Angle resolution
+		if end_pos[0] < start_pos[0] and end_pos[1] < center[1]:
+			angle = 180 + angle
+		elif end_pos[0] < start_pos[0] and end_pos[1] > center[1]:
+			angle = 180 - angle
+		elif end_pos[0] > start_pos[0] and end_pos[1] < center[1]:
+			angle = 360 - angle
+		else:
+			angle = 360 + angle
+
+		return angle
 
 
 # Particle
@@ -142,14 +174,45 @@ def walk_curve(amp: float, freq: float, t: float) -> float:
 	return amp * math.sin(freq * math.radians(t))
 
 
+# Trail
+@dataclass
+class Trail:
+	angle: float
+	start_pos: list[float, float]
+	end_pos: list[float, float]
+	color: tuple[float, float, float]
+
+trails: list[Trail] = []
+
+def add_trail(trail_start: list[float, float], angle: float):
+	trail_end = [
+		trail_start[0] + gun_range * math.cos(math.radians(angle)),
+		trail_start[1] + gun_range * math.sin(math.radians(angle))
+	]
+	trails.append(Trail(angle, trail_start, trail_end, (255, 255, 255)))
+
+def draw_trail():
+	for trail in trails:
+		pg.draw.line(display, trail.color, trail.start_pos, trail.end_pos, 1)
+		trail.start_pos = [
+			trail.start_pos[0] + 5 * math.cos(math.radians(trail.angle)),
+			trail.start_pos[1] + 5 * math.sin(math.radians(trail.angle))
+		]
+
+		if dist(trail.start_pos, trail.end_pos) < 10:
+			trails.remove(trail)
+
+
 # Gun
 gun_dist  = GUN_DIST
 gun_len   = GUN_LEN
 gun_width = GUN_WIDTH
 gun_color = GUN_COLOR
-gun_kickback = 5
+gun_range = GUN_RANGE
+gun_kickback = GUN_KICKBACK
+gun_timeout  = GUN_MAX_TIMEOUT
+gun_firerate = GUN_FIRERATE
 gun_fire = False
-gun_tick = 0
 
 def gun_interpolate(src: float, dest: float, speed: float) -> float:
 	if src == dest: return src
@@ -161,38 +224,46 @@ def gun_interpolate(src: float, dest: float, speed: float) -> float:
 
 	return src
 
-def draw_muzzle_flash(position: list[float]):
-	mp = pg.mouse.get_pos()
-	mp = [
-		mp[0] / WINDOW_WIDTH * DISPLAY_WIDTH,
-		mp[1] / WINDOW_HEIGHT * DISPLAY_HEIGHT
-	]
-	pg.draw.line(display, (255,255,255), position, mp, 1)
+def draw_muzzle_flash(position: list[float, float]):
+	mp = get_mouse_pos()
+	vel = [0, 0]
+
+	if mp[0] > position[0]:
+		vel[0] = 1
+	elif mp[0] < position[0]:
+		vel[0] = -1
+
+	if mp[1] > position[1]:
+		vel[1] = 1
+	elif mp[1] < position[1]:
+		vel[1] = -1
+
 	# YELLOW_NOZZLE_FLASH_FORWARD
 	particle_add(
 			position, (240, 206, 65),
-			[1, 0],
-			1, random.choices([0, 1], weights=(70,30))[0], 3
+			vel,
+			1, random.choices([0, 1], weights=(20,80))[0], 3
 	)
+
 	# RED_NOZZLE_FLASH_FORWARD
 	particle_add(
 			position, (255, 90, 0),
-			[1, 0],
-			2, random.choices([0, 1], weights=(70,30))[0], 3
+			vel,
+			2, random.choices([0, 1], weights=(20,80))[0], 3
 	)
 
 	# RED_NOZZLE_UP_DOWN
 	particle_add(
 			position, (255, 90, 0),
 			[1, random.randint(-1,1)],
-			2, random.choices([0, 1], weights=(70,30))[0], 2
+			2, random.choices([0, 1], weights=(20,80))[0], 2
 	)
 
 	# YELLOW_NOZZLE_UP_DOWN
 	particle_add(
 			position, (240, 206, 65),
 			[1, random.randint(-1,1)],
-			1, random.choices([0, 1], weights=(70,30))[0], 2
+			1, random.choices([0, 1], weights=(20,80))[0], 2
 	)
 
 # Main loop
@@ -227,7 +298,6 @@ while running:
 
 		# Player walk animation and particle
 		p_tmp_rect = player_rect.copy()
-		draw_muzzle_flash([100,100])
 		if vel[0] or vel[1]:
 			player_walk_curve = walk_curve(1.5, 15, player_tick)
 			player_tick += 1
@@ -254,29 +324,12 @@ while running:
 			player_walk_curve = 0
 
 		# Weapon Holding
-		mp = pg.mouse.get_pos()
-		mp = [
-			mp[0] / WINDOW_WIDTH * DISPLAY_WIDTH,
-			mp[1] / WINDOW_HEIGHT * DISPLAY_HEIGHT
-		]
+		mp = get_mouse_pos()
 		center = [
 			player_rect.x + player_rect.w / 2,
 			player_rect.y + player_rect.h / 2
 		]
-
-		P = abs(mp[1] - center[1])
-		B = abs(mp[0] - center[0])
-		angle = math.degrees(math.atan2(P, B))
-
-		# Angle resolution
-		if mp[0] < center[0] and mp[1] < center[1]:
-			angle = 180 + angle
-		elif mp[0] < center[0] and mp[1] > center[1]:
-			angle = 180 - angle
-		elif mp[0] > center[0] and mp[1] < center[1]:
-			angle = 360 - angle
-		else:
-			angle = 360 + angle
+		angle = calc_angle(center, mp)
 
 		# Calculating gun position
 		gun_start = [
@@ -289,14 +342,26 @@ while running:
 			gun_start[1] + gun_len * math.sin(math.radians(angle))
 		]
 
+		muzzle_start = [
+			gun_start[0] + 3 + gun_len * math.cos(math.radians(angle)),
+			gun_start[1] + 3 + gun_len * math.sin(math.radians(angle))
+		]
+
 		# Firing
 		if gun_fire:
-			gun_dist = gun_interpolate(gun_dist, GUN_DIST - gun_kickback, 1)
+			if gun_timeout >= GUN_MAX_TIMEOUT:
+				gun_dist = gun_interpolate(gun_dist, GUN_DIST - gun_kickback, 2)
+				draw_muzzle_flash(muzzle_start)
+				add_trail(gun_end, angle)
+				gun_timeout = 0
+			else:
+				gun_timeout += gun_firerate
 		else:
 			gun_dist = gun_interpolate(gun_dist, GUN_DIST, 1)
 
 		# Draw
 		particle_draw()
+		draw_trail()
 		display.blit(player_sprite, (p_tmp_rect.x, p_tmp_rect.y))
 		pg.draw.line(display, gun_color, gun_start, gun_end, gun_width)
 
