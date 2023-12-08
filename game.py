@@ -25,6 +25,7 @@ GUN_DIST = 15
 GUN_LEN  = 10
 GUN_WIDTH = 1
 GUN_RANGE = 1000
+GUN_DAMAGE = 100
 GUN_KICKBACK = 5
 GUN_MAX_TIMEOUT = 5
 GUN_FIRERATE = 0.5
@@ -152,7 +153,7 @@ def particle_draw(camera: list[float, float]):
 		p.pos[0] += p.vel[0]
 		p.pos[1] += p.vel[1]
 		p.time -= 0.1
-		p.radius -= 0.2
+		p.radius -= 0.1
 
 		pg.draw.circle(display, p.col, (p.pos[0] - camera[0], p.pos[1] - camera[1]), p.radius)
 		if p.time <= 0:
@@ -182,6 +183,12 @@ class EntityType:
 	PLAYER = 0
 	ENEMY  = 1
 
+class EntityState:
+	IDLE = 0
+	WALK = 1
+	DAMAGE = 2
+	DEAD = 3
+
 class Entity:
 	def __init__(
 		self,
@@ -203,11 +210,49 @@ class Entity:
 			"down" : False
 		}
 
+		self.health = 100
+		self.state = EntityState.IDLE
 		self.vel = [0, 0]
 		self.trans_rect = self.rect.copy()
+		self.org_sprite = self.sprite.copy()
+		self.dmg_sprite = self.sprite.copy()
+		self.dmg_sprite.fill((90, 0, 0, 0), special_flags = pg.BLEND_ADD)
+
+	def die(self):
+		entities.remove(self)
+		pos = [self.rect.x + self.rect.w / 2, self.rect.y + self.rect.h / 2]
+
+		particle_add(
+			pos,
+			(165, 165, 165),
+			[random.choice([-0.01, 0.01]), random.choice([-0.01, -0.1, -0.05])],
+			4, 6, 4
+		)
+		particle_add(
+			pos,
+			(165, 165, 165),
+			[random.choice([-0.01, 0.01]), random.choice([-0.01, -0.1, -0.05])],
+			3, 6, 3
+		)
+		particle_add(
+			pos,
+			(165, 165, 165),
+			[random.choice([-0.01, 0.01]), random.choice([-0.01, -0.1, -0.05])],
+			5, 6, 5
+		)
+
+	def take_damage(self, damage: float):
+		self.health -= damage
+		self.state = EntityState.DAMAGE
+
+		if self.health <= 0:
+			self.die()
 
 	def update_movement(self, dt: float) -> Self:
+		if self.state != EntityState.DAMAGE:
+			self.state = EntityState.IDLE
 		self.vel = [0, 0]
+
 		if self.movement["left"]:
 			self.vel[0] -= self.speed * dt
 		if self.movement["right"]:
@@ -217,6 +262,9 @@ class Entity:
 		if self.movement["down"]:
 			self.vel[1] += self.speed * dt
 
+		if self.vel[0] or self.vel[1]:
+			self.state = EntityState.WALK
+
 		self.rect.x += self.vel[0]
 		self.rect.y += self.vel[1]
 
@@ -224,30 +272,41 @@ class Entity:
 
 	def update_animation(self) -> Self:
 		self.trans_rect = self.rect.copy()
-		if self.vel[0] or self.vel[1]:
-			self.walk_curve = sin_wave(1.5, 15, self.tick)
-			self.tick += 1
 
-			if self.vel[0]:
-				self.trans_rect.y += self.walk_curve
-			elif self.vel[1]:
-				self.trans_rect.x += self.walk_curve
+		match self.state:
+			case EntityState.WALK:
+				self.walk_curve = sin_wave(1.5, 15, self.tick)
+				self.tick += 1
 
-			feet = [self.rect.x + self.rect.w / 2, self.rect.y + self.rect.h - 2]
+				if self.vel[0]:
+					self.trans_rect.y += self.walk_curve
+				elif self.vel[1]:
+					self.trans_rect.x += self.walk_curve
 
-			particle_add(
-				feet, (165, 165, 165),
-				[random.randint(-1, 1), 0],
-				4, random.choices([0, 1], weights=(70,30))[0], 3
-			)
-			particle_add(
-				feet, (110, 110, 110),
-				[random.randint(-1, 1), 0],
-				4, random.choices([0, 1], weights=(70,30))[0], 3
-			)
-		else:
-			self.tick = 0
-			self.walk_curve = 0
+				feet = [self.rect.x + self.rect.w / 2, self.rect.y + self.rect.h - 2]
+
+				particle_add(
+					feet, (165, 165, 165),
+					[random.randint(-1, 1), 0],
+					4, random.choices([0, 1], weights=(70,30))[0], 3
+				)
+				particle_add(
+					feet, (110, 110, 110),
+					[random.randint(-1, 1), 0],
+					4, random.choices([0, 1], weights=(70,30))[0], 3
+				)
+
+			case EntityState.DAMAGE:
+				self.sprite = self.dmg_sprite
+				self.tick += 0.1
+
+				if self.tick >= 5:
+					self.sprite = self.org_sprite
+					self.state = EntityState.IDLE
+
+			case default:
+				self.tick = 0
+				self.walk_curve = 0
 
 		return self
 
@@ -270,6 +329,14 @@ entities.append(player)
 
 
 # Enemy
+enemy = Entity(
+	EntityType.ENEMY,
+	sprite_sheet_get(pg.Rect(0, 0, SPRITE_SIZE, SPRITE_SIZE)),
+	pg.Rect(10, 10, SPRITE_SIZE, SPRITE_SIZE),
+	2
+)
+entities.append(enemy)
+
 def spawn_enemy(positions: list[tuple[int,int]]):
 	pos = random.choice(positions)
 	enemy = Entity(
@@ -298,11 +365,7 @@ class Trail:
 
 trails: list[Trail] = []
 
-def add_trail(trail_start: list[float, float], range: float, angle: float):
-	trail_end = [
-		trail_start[0] + range * math.cos(math.radians(angle)),
-		trail_start[1] + range * math.sin(math.radians(angle))
-	]
+def add_trail(trail_start: list[float, float], trail_end: list[float, float], angle: float):
 	trails.append(Trail(angle, trail_start, trail_end, (255, 255, 255)))
 
 def draw_trail(camera: list[float, float]):
@@ -329,6 +392,7 @@ class GunConf:
 	width: float
 	color: tuple[int, int, int]
 	range: float
+	damage: float
 	kickback: float
 	timeout: float
 	firerate: float
@@ -381,6 +445,12 @@ class Gun:
 				1, random.choices([0, 1], weights=(20,80))[0], 2
 		)
 
+	def check_hit(self, trail_start: list[float, float], trail_end: list[float, float]):
+		for ent in entities:
+			if ent.etype == EntityType.ENEMY:
+				if ent.rect.clipline(trail_start, trail_end):
+					ent.take_damage(self.conf.damage);
+
 	def attach_onto(self, ent: Entity) -> Self:
 		self.parent = ent
 		return self
@@ -418,10 +488,20 @@ class Gun:
 	def update_trigger(self) -> Self:
 		if self.fire:
 			if self.conf.timeout >= GUN_MAX_TIMEOUT:
-				self.conf.dist = interpolate(self.conf.dist, GUN_DIST - self.conf.kickback, 2)
-				self.draw_muzzle_flash(self.muzzle_start)
-				add_trail(self.gun_end, self.conf.range, self.angle)
 				self.conf.timeout = 0
+
+				self.conf.dist = interpolate(self.conf.dist, GUN_DIST - self.conf.kickback, 2)
+
+				self.draw_muzzle_flash(self.muzzle_start)
+
+				trail_start = self.gun_end
+				trail_end = [
+					trail_start[0] + self.conf.range * math.cos(math.radians(self.angle)),
+					trail_start[1] + self.conf.range * math.sin(math.radians(self.angle))
+				]
+				add_trail(trail_start, trail_end, self.angle)
+
+				self.check_hit(trail_start, trail_end)
 			else:
 				self.conf.timeout += self.conf.firerate
 		else:
@@ -444,13 +524,13 @@ DEFAULT_CONF = GunConf(
 	GUN_WIDTH,
 	GUN_COLOR,
 	GUN_RANGE,
+	GUN_DAMAGE,
 	GUN_KICKBACK,
 	GUN_MAX_TIMEOUT,
 	GUN_FIRERATE
 )
 
 gun = Gun(DEFAULT_CONF)
-
 
 
 # Main loop
@@ -473,10 +553,10 @@ while running:
 		camera[0] += (player.rect.x - camera[0] - DISPLAY_WIDTH  / 2) / 10
 		camera[1] += (player.rect.y - camera[1] - DISPLAY_HEIGHT / 2) / 10
 
-		# Drawing Enemy Spawn Area
+		# Enemy Spawn Area
 		center = [
-			(player.rect.x + player.rect.w / 2) - enemy_spawn_area.w /2,
-			(player.rect.y + player.rect.h / 2) - enemy_spawn_area.h/2
+			(player.rect.x + player.rect.w / 2) - enemy_spawn_area.w / 2,
+			(player.rect.y + player.rect.h / 2) - enemy_spawn_area.h / 2
 		]
 
 		enemy_spawn_area.x = center[0]
@@ -487,7 +567,7 @@ while running:
 		ENEMY_SPAWN_VERTICES[2] = (enemy_spawn_area.x + enemy_spawn_area.width, enemy_spawn_area.y + enemy_spawn_area.height)
 		ENEMY_SPAWN_VERTICES[3] = (enemy_spawn_area.x, enemy_spawn_area.y + enemy_spawn_area.height)
 
-		spawn_enemy(ENEMY_SPAWN_VERTICES)
+		# spawn_enemy(ENEMY_SPAWN_VERTICES)
 
 		particle_draw(camera)
 
