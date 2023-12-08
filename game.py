@@ -30,6 +30,8 @@ GUN_MAX_TIMEOUT = 5
 GUN_FIRERATE = 0.5
 GUN_COLOR = (255, 0, 0)
 
+ENEMY_SPAWN_VERTICES = [(0,0),(0,0),(0,0),(0,0)]
+
 
 # Inits
 pg.init()
@@ -263,7 +265,28 @@ player = Entity(
 	pg.Rect(0, 0, SPRITE_SIZE, SPRITE_SIZE),
 	2
 )
+
 entities.append(player)
+
+# Enemy
+def spawn_enemy(positions: list[tuple[int,int]]):
+	pos = random.choice(positions)
+	enemy = Entity(
+		EntityType.PLAYER,
+		sprite_sheet_get(pg.Rect(0, 0, SPRITE_SIZE, SPRITE_SIZE)),
+		pg.Rect(pos[0], pos[1], SPRITE_SIZE, SPRITE_SIZE),
+		2
+	)
+	entities.append(enemy)
+
+
+
+
+# Enemy Spawn Area
+enemy_spawn_area = pg.Rect(
+	0,0,
+	400,400
+)
 
 
 # Trail
@@ -430,6 +453,7 @@ DEFAULT_CONF = GunConf(
 gun = Gun(DEFAULT_CONF)
 
 
+
 # Main loop
 game = False
 running = True
@@ -450,7 +474,24 @@ while running:
 		camera[0] += (player.rect.x - camera[0] - DISPLAY_WIDTH  / 2) / 10
 		camera[1] += (player.rect.y - camera[1] - DISPLAY_HEIGHT / 2) / 10
 
+		# Drawing Enemy Spawn Area
+		center = [
+			(player.rect.x + player.rect.w / 2) - enemy_spawn_area.w /2,
+			(player.rect.y + player.rect.h / 2) - enemy_spawn_area.h/2
+		]
+
+		enemy_spawn_area.x = center[0]
+		enemy_spawn_area.y = center[1]
+
+		ENEMY_SPAWN_VERTICES[0] = (enemy_spawn_area.x, enemy_spawn_area.y)
+		ENEMY_SPAWN_VERTICES[1] = (enemy_spawn_area.x + enemy_spawn_area.width, enemy_spawn_area.y)
+		ENEMY_SPAWN_VERTICES[2] = (enemy_spawn_area.x + enemy_spawn_area.width, enemy_spawn_area.y + enemy_spawn_area.height)
+		ENEMY_SPAWN_VERTICES[3] = (enemy_spawn_area.x, enemy_spawn_area.y + enemy_spawn_area.height)
+
+		spawn_enemy(ENEMY_SPAWN_VERTICES)
+
 		particle_draw(camera)
+
 
 		# Updating entities
 		for ent in entities:
