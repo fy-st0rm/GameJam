@@ -180,6 +180,7 @@ camera: list[float, float] = [0, 0]
 # Entity
 class EntityType:
 	PLAYER = 0
+	ENEMY  = 1
 
 class Entity:
 	def __init__(
@@ -265,21 +266,19 @@ player = Entity(
 	pg.Rect(0, 0, SPRITE_SIZE, SPRITE_SIZE),
 	2
 )
-
 entities.append(player)
+
 
 # Enemy
 def spawn_enemy(positions: list[tuple[int,int]]):
 	pos = random.choice(positions)
 	enemy = Entity(
-		EntityType.PLAYER,
+		EntityType.ENEMY,
 		sprite_sheet_get(pg.Rect(0, 0, SPRITE_SIZE, SPRITE_SIZE)),
 		pg.Rect(pos[0], pos[1], SPRITE_SIZE, SPRITE_SIZE),
 		2
 	)
 	entities.append(enemy)
-
-
 
 
 # Enemy Spawn Area
