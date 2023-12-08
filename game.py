@@ -32,9 +32,16 @@ GUN_COLOR = (255, 0, 0)
 
 ENEMY_SPAWN_VERTICES = [(0,0),(0,0),(0,0),(0,0)]
 
+ENEMY_TIMER = 5
+
+WAVE_TIMER = time.time()
+WAVE_COUNT = 0
+WAVE_TIME = 10
+
 
 # Inits
 pg.init()
+pg.font.init()
 
 screen = pg.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 display = pg.Surface((DISPLAY_WIDTH, DISPLAY_HEIGHT))
@@ -42,6 +49,9 @@ ui_surface = pg.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
 
 ui_manager = pgui.UIManager((WINDOW_WIDTH, WINDOW_HEIGHT))
 clock = pg.time.Clock()
+
+ui_font = pg.font.Font("assets/font.ttf", 50)
+ui_font_small = pg.font.Font("assets/font.ttf", 20)
 
 
 # Main menu
@@ -454,9 +464,12 @@ gun = Gun(DEFAULT_CONF)
 
 
 # Main loop
+enemy_timer = ENEMY_TIMER
 game = False
 running = True
 last_time = time.time()
+
+wave_info = ui_font.render(f"Wave: {WAVE_COUNT}", False, (0,255,255))
 
 while running:
 	# Calculating delta time
@@ -487,9 +500,23 @@ while running:
 		ENEMY_SPAWN_VERTICES[2] = (enemy_spawn_area.x + enemy_spawn_area.width, enemy_spawn_area.y + enemy_spawn_area.height)
 		ENEMY_SPAWN_VERTICES[3] = (enemy_spawn_area.x, enemy_spawn_area.y + enemy_spawn_area.height)
 
-		spawn_enemy(ENEMY_SPAWN_VERTICES)
+		# Enemy Timer
+		enemy_timer -= 0.1
+		if enemy_timer <= 0:
+			spawn_enemy(ENEMY_SPAWN_VERTICES)
+			enemy_timer = ENEMY_TIMER
 
 		particle_draw(camera)
+
+		# Wave Timer
+		wave_timer = time.time()
+		wave_timer_ui = ui_font_small.render(f"Wave Timer: {int(wave_timer - WAVE_TIMER)}s", False, (0,255,255))
+		if (wave_timer - WAVE_TIMER) >= WAVE_TIME:
+			WAVE_COUNT += 1
+			WAVE_TIMER = time.time()
+			ENEMY_TIMER -= 1
+			WAVE_TIME += 5
+
 
 
 		# Updating entities
@@ -513,6 +540,9 @@ while running:
 		draw_trail(camera)
 
 		screen.blit(pg.transform.scale(display, (WINDOW_WIDTH, WINDOW_HEIGHT)), (0, 0))
+		wave_info = ui_font.render(f"Wave: {WAVE_COUNT}", False, (0,255,255))
+		screen.blit(wave_info, (0,0))
+		screen.blit(wave_timer_ui, (0,60))
 	
 	# UI loop
 	else:
@@ -522,6 +552,7 @@ while running:
 		ui_manager.update(t)
 		ui_manager.draw_ui(ui_surface)
 		screen.blit(ui_surface, (0, 0))
+		
 
 	# Event
 	for event in pg.event.get():
@@ -548,6 +579,10 @@ while running:
 		elif event.type == pg.MOUSEBUTTONDOWN:
 			if pg.mouse.get_pressed()[0]:
 				gun.fire = True
+				for ent in entities:
+					if ent.etype == EntityType.ENEMY:
+						entities.remove(ent)
+			
 		elif event.type == pg.MOUSEBUTTONUP:
 			if not pg.mouse.get_pressed()[0]:
 				gun.fire = False
