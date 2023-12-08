@@ -4,10 +4,11 @@ import time
 import math
 import random
 from dataclasses import dataclass
+from typing_extensions import Self
 
 
 # Configs
-WINDOW_WIDTH	= 800
+WINDOW_WIDTH  = 800
 WINDOW_HEIGHT = 600
 
 DISPLAY_WIDTH  = WINDOW_WIDTH / 3
@@ -83,6 +84,19 @@ def clamp(n, min, max):
 def dist(start: list[float, float], end: list[float, float]) -> float:
 	return math.sqrt((end[0] - start[0])**2 + (end[1] - start[1])**2)
 
+def sin_wave(amp: float, freq: float, t: float) -> float:
+	return amp * math.sin(freq * math.radians(t))
+
+def interpolate(src: float, dest: float, speed: float) -> float:
+	if src == dest: return src
+
+	if src < dest:
+		src += speed
+	elif src > dest:
+		src -= speed
+
+	return src
+
 def get_mouse_pos() -> list[float, float]:
 	mp = pg.mouse.get_pos()
 	mp = [
@@ -97,11 +111,11 @@ def calc_angle(start_pos: list[float, float], end_pos: list[float, float]) -> fl
 		angle = math.degrees(math.atan2(P, B))
 
 		# Angle resolution
-		if end_pos[0] < start_pos[0] and end_pos[1] < center[1]:
+		if end_pos[0] < start_pos[0] and end_pos[1] < start_pos[1]:
 			angle = 180 + angle
-		elif end_pos[0] < start_pos[0] and end_pos[1] > center[1]:
+		elif end_pos[0] < start_pos[0] and end_pos[1] > start_pos[1]:
 			angle = 180 - angle
-		elif end_pos[0] > start_pos[0] and end_pos[1] < center[1]:
+		elif end_pos[0] > start_pos[0] and end_pos[1] < start_pos[1]:
 			angle = 360 - angle
 		else:
 			angle = 360 + angle
@@ -131,14 +145,14 @@ def particle_add(
 	for i in range(amt):
 		particles.append(Particle(pos, vel, col, time, radius))
 
-def particle_draw():
+def particle_draw(camera: list[float, float]):
 	for p in particles:
 		p.pos[0] += p.vel[0]
 		p.pos[1] += p.vel[1]
 		p.time -= 0.1
 		p.radius -= 0.2
 
-		pg.draw.circle(display, p.col, p.pos, p.radius)
+		pg.draw.circle(display, p.col, (p.pos[0] - camera[0], p.pos[1] - camera[1]), p.radius)
 		if p.time <= 0:
 			particles.remove(p)
 
@@ -157,21 +171,99 @@ def sprite_sheet_get(rect: pg.Rect) -> pg.Surface:
 	return sprite
 
 
-# Player
-player_sprite = sprite_sheet_get(pg.Rect(2, 0, SPRITE_SIZE, SPRITE_SIZE))
-player_rect = pg.Rect(0, 0, SPRITE_SIZE, SPRITE_SIZE)
-player_speed = 2
-player_tick = 0
-player_walk_curve = 0
-player_movement = {
-	"left" : False,
-	"right": False,
-	"up"   : False,
-	"down" : False
-}
+# Camera
+camera: list[float, float] = [0, 0]
 
-def walk_curve(amp: float, freq: float, t: float) -> float:
-	return amp * math.sin(freq * math.radians(t))
+
+# Entity
+class EntityType:
+	PLAYER = 0
+
+class Entity:
+	def __init__(
+		self,
+		etype: EntityType,
+		sprite: pg.Surface,
+		rect: pg.Rect,
+		speed: float
+	):
+		self.etype = etype
+		self.sprite = sprite
+		self.rect = rect
+		self.speed = speed
+		self.tick = 0
+		self.walk_curve = 0
+		self.movement = {
+			"left" : False,
+			"right": False,
+			"up"   : False,
+			"down" : False
+		}
+
+		self.vel = [0, 0]
+		self.trans_rect = self.rect.copy()
+
+	def update_movement(self, dt: float) -> Self:
+		self.vel = [0, 0]
+		if self.movement["left"]:
+			self.vel[0] -= self.speed * dt
+		if self.movement["right"]:
+			self.vel[0] += self.speed * dt
+		if self.movement["up"]:
+			self.vel[1] -= self.speed * dt
+		if self.movement["down"]:
+			self.vel[1] += self.speed * dt
+
+		self.rect.x += self.vel[0]
+		self.rect.y += self.vel[1]
+
+		return self
+
+	def update_animation(self) -> Self:
+		self.trans_rect = self.rect.copy()
+		if self.vel[0] or self.vel[1]:
+			self.walk_curve = sin_wave(1.5, 15, self.tick)
+			self.tick += 1
+
+			if self.vel[0]:
+				self.trans_rect.y += self.walk_curve
+			elif self.vel[1]:
+				self.trans_rect.x += self.walk_curve
+
+			feet = [self.rect.x + self.rect.w / 2, self.rect.y + self.rect.h - 2]
+
+			particle_add(
+				feet, (165, 165, 165),
+				[random.randint(-1, 1), 0],
+				4, random.choices([0, 1], weights=(70,30))[0], 3
+			)
+			particle_add(
+				feet, (110, 110, 110),
+				[random.randint(-1, 1), 0],
+				4, random.choices([0, 1], weights=(70,30))[0], 3
+			)
+		else:
+			self.tick = 0
+			self.walk_curve = 0
+
+		return self
+
+	def draw(self, surface: pg.Surface, camera: list[float, float]):
+		surface.blit(self.sprite, (self.trans_rect.x - camera[0], self.trans_rect.y - camera[1]))
+
+
+# Entity init
+entities: list[Entity] = []
+
+
+# Player
+player = Entity(
+	EntityType.PLAYER,
+	sprite_sheet_get(pg.Rect(2, 0, SPRITE_SIZE, SPRITE_SIZE)),
+	pg.Rect(0, 0, SPRITE_SIZE, SPRITE_SIZE),
+	2
+)
+entities.append(player)
 
 
 # Trail
@@ -184,16 +276,20 @@ class Trail:
 
 trails: list[Trail] = []
 
-def add_trail(trail_start: list[float, float], angle: float):
+def add_trail(trail_start: list[float, float], range: float, angle: float):
 	trail_end = [
-		trail_start[0] + gun_range * math.cos(math.radians(angle)),
-		trail_start[1] + gun_range * math.sin(math.radians(angle))
+		trail_start[0] + range * math.cos(math.radians(angle)),
+		trail_start[1] + range * math.sin(math.radians(angle))
 	]
 	trails.append(Trail(angle, trail_start, trail_end, (255, 255, 255)))
 
-def draw_trail():
+def draw_trail(camera: list[float, float]):
 	for trail in trails:
-		pg.draw.line(display, trail.color, trail.start_pos, trail.end_pos, 1)
+		pg.draw.line(
+			display, trail.color,
+			(trail.start_pos[0] - camera[0], trail.start_pos[1] - camera[1]),
+			(trail.end_pos[0] - camera[0], trail.end_pos[1] - camera[1]), 1
+		)
 		trail.start_pos = [
 			trail.start_pos[0] + 5 * math.cos(math.radians(trail.angle)),
 			trail.start_pos[1] + 5 * math.sin(math.radians(trail.angle))
@@ -204,67 +300,135 @@ def draw_trail():
 
 
 # Gun
-gun_dist  = GUN_DIST
-gun_len   = GUN_LEN
-gun_width = GUN_WIDTH
-gun_color = GUN_COLOR
-gun_range = GUN_RANGE
-gun_kickback = GUN_KICKBACK
-gun_timeout  = GUN_MAX_TIMEOUT
-gun_firerate = GUN_FIRERATE
-gun_fire = False
+@dataclass
+class GunConf:
+	dist: float
+	len: float
+	width: float
+	color: tuple[int, int, int]
+	range: float
+	kickback: float
+	timeout: float
+	firerate: float
 
-def gun_interpolate(src: float, dest: float, speed: float) -> float:
-	if src == dest: return src
+class Gun:
+	def __init__(self, conf: GunConf):
+		self.conf = conf
+		self.fire = False
+		self.parent: Entity = None
 
-	if src < dest:
-		src += speed
-	elif src > dest:
-		src -= speed
+	def draw_muzzle_flash(self, position: list[float, float]):
+		mp = get_mouse_pos()
+		vel = [0, 0]
+	
+		if mp[0] > position[0]:
+			vel[0] = 1
+		elif mp[0] < position[0]:
+			vel[0] = -1
+	
+		if mp[1] > position[1]:
+			vel[1] = 1
+		elif mp[1] < position[1]:
+			vel[1] = -1
+	
+		# YELLOW_NOZZLE_FLASH_FORWARD
+		particle_add(
+				position, (240, 206, 65),
+				vel,
+				1, random.choices([0, 1], weights=(20,80))[0], 3
+		)
+	
+		# RED_NOZZLE_FLASH_FORWARD
+		particle_add(
+				position, (255, 90, 0),
+				vel,
+				2, random.choices([0, 1], weights=(20,80))[0], 3
+		)
+	
+		# RED_NOZZLE_UP_DOWN
+		particle_add(
+				position, (255, 90, 0),
+				[1, random.randint(-1,1)],
+				2, random.choices([0, 1], weights=(20,80))[0], 2
+		)
+	
+		# YELLOW_NOZZLE_UP_DOWN
+		particle_add(
+				position, (240, 206, 65),
+				[1, random.randint(-1,1)],
+				1, random.choices([0, 1], weights=(20,80))[0], 2
+		)
 
-	return src
+	def attach_onto(self, ent: Entity) -> Self:
+		self.parent = ent
+		return self
 
-def draw_muzzle_flash(position: list[float, float]):
-	mp = get_mouse_pos()
-	vel = [0, 0]
+	def update_position(self, camera: list[float, float]) -> Self:
+		mp = get_mouse_pos()
+		center = [
+			(self.parent.rect.x) - camera[0] + self.parent.rect.w / 2,
+			(self.parent.rect.y) - camera[1] + self.parent.rect.h / 2
+		]
+		self.angle = calc_angle(center, mp)
+		center = [
+			self.parent.rect.x + self.parent.rect.w / 2,
+			self.parent.rect.y + self.parent.rect.h / 2
+		]
 
-	if mp[0] > position[0]:
-		vel[0] = 1
-	elif mp[0] < position[0]:
-		vel[0] = -1
+		# Calculating gun and muzzle position
+		self.gun_start = [
+			center[0] + self.conf.dist * math.cos(math.radians(self.angle)),
+			center[1] + self.conf.dist * math.sin(math.radians(self.angle))
+		]
 
-	if mp[1] > position[1]:
-		vel[1] = 1
-	elif mp[1] < position[1]:
-		vel[1] = -1
+		self.gun_end = [
+			self.gun_start[0] + self.conf.len * math.cos(math.radians(self.angle)),
+			self.gun_start[1] + self.conf.len * math.sin(math.radians(self.angle))
+		]
 
-	# YELLOW_NOZZLE_FLASH_FORWARD
-	particle_add(
-			position, (240, 206, 65),
-			vel,
-			1, random.choices([0, 1], weights=(20,80))[0], 3
-	)
+		self.muzzle_start = [
+			self.gun_start[0] + 3 + self.conf.len * math.cos(math.radians(self.angle)),
+			self.gun_start[1] + 3 + self.conf.len * math.sin(math.radians(self.angle))
+		]
 
-	# RED_NOZZLE_FLASH_FORWARD
-	particle_add(
-			position, (255, 90, 0),
-			vel,
-			2, random.choices([0, 1], weights=(20,80))[0], 3
-	)
+		return self
 
-	# RED_NOZZLE_UP_DOWN
-	particle_add(
-			position, (255, 90, 0),
-			[1, random.randint(-1,1)],
-			2, random.choices([0, 1], weights=(20,80))[0], 2
-	)
+	def update_trigger(self) -> Self:
+		if self.fire:
+			if self.conf.timeout >= GUN_MAX_TIMEOUT:
+				self.conf.dist = interpolate(self.conf.dist, GUN_DIST - self.conf.kickback, 2)
+				self.draw_muzzle_flash(self.muzzle_start)
+				add_trail(self.gun_end, self.conf.range, self.angle)
+				self.conf.timeout = 0
+			else:
+				self.conf.timeout += self.conf.firerate
+		else:
+			self.conf.dist = interpolate(self.conf.dist, GUN_DIST, 1)
+		return self
 
-	# YELLOW_NOZZLE_UP_DOWN
-	particle_add(
-			position, (240, 206, 65),
-			[1, random.randint(-1,1)],
-			1, random.choices([0, 1], weights=(20,80))[0], 2
-	)
+	def draw(self, surface: pg.Surface, camera: list[float, float]):
+		pg.draw.line(
+			surface, self.conf.color,
+			(self.gun_start[0] - camera[0], self.gun_start[1] - camera[1]),
+			(self.gun_end[0] - camera[0], self.gun_end[1] - camera[1]),
+			self.conf.width
+		)
+
+
+# Gun init
+DEFAULT_CONF = GunConf(
+	GUN_DIST,
+	GUN_LEN,
+	GUN_WIDTH,
+	GUN_COLOR,
+	GUN_RANGE,
+	GUN_KICKBACK,
+	GUN_MAX_TIMEOUT,
+	GUN_FIRERATE
+)
+
+gun = Gun(DEFAULT_CONF)
+
 
 # Main loop
 game = False
@@ -282,88 +446,31 @@ while running:
 	if game:
 		display.fill(BG_COLOR)
 
-		# Player logic
-		vel = [0, 0]
-		if player_movement["left"]:
-			vel[0] -= player_speed * dt
-		if player_movement["right"]:
-			vel[0] += player_speed * dt
-		if player_movement["up"]:
-			vel[1] -= player_speed * dt
-		if player_movement["down"]:
-			vel[1] += player_speed * dt
+		# Updating camera
+		camera[0] += (player.rect.x - camera[0] - DISPLAY_WIDTH  / 2) / 10
+		camera[1] += (player.rect.y - camera[1] - DISPLAY_HEIGHT / 2) / 10
 
-		player_rect.x += vel[0]
-		player_rect.y += vel[1]
+		particle_draw(camera)
 
-		# Player walk animation and particle
-		p_tmp_rect = player_rect.copy()
-		if vel[0] or vel[1]:
-			player_walk_curve = walk_curve(1.5, 15, player_tick)
-			player_tick += 1
-
-			if vel[0]:
-				p_tmp_rect.y += player_walk_curve
-			elif vel[1]:
-				p_tmp_rect.x += player_walk_curve
-
-			feet = [player_rect.x + player_rect.w / 2, player_rect.y + player_rect.h - 2]
-
-			particle_add(
-				feet, (165, 165, 165),
-				[random.randint(-1, 1), 0],
-				4, random.choices([0, 1], weights=(70,30))[0], 3
+		# Updating entities
+		for ent in entities:
+			(
+				ent
+					.update_movement(dt)
+					.update_animation()
+					.draw(display, camera)
 			)
-			particle_add(
-				feet, (110, 110, 110),
-				[random.randint(-1, 1), 0],
-				4, random.choices([0, 1], weights=(70,30))[0], 3
-			)
-		else:
-			player_tick = 0
-			player_walk_curve = 0
 
-		# Weapon Holding
-		mp = get_mouse_pos()
-		center = [
-			player_rect.x + player_rect.w / 2,
-			player_rect.y + player_rect.h / 2
-		]
-		angle = calc_angle(center, mp)
+		# Updaing gun
+		(
+			gun
+				.attach_onto(player)
+				.update_position(camera)
+				.update_trigger()
+				.draw(display, camera)
+		)
 
-		# Calculating gun position
-		gun_start = [
-			center[0] + gun_dist * math.cos(math.radians(angle)),
-			center[1] + gun_dist * math.sin(math.radians(angle))
-		]
-
-		gun_end = [
-			gun_start[0] + gun_len * math.cos(math.radians(angle)),
-			gun_start[1] + gun_len * math.sin(math.radians(angle))
-		]
-
-		muzzle_start = [
-			gun_start[0] + 3 + gun_len * math.cos(math.radians(angle)),
-			gun_start[1] + 3 + gun_len * math.sin(math.radians(angle))
-		]
-
-		# Firing
-		if gun_fire:
-			if gun_timeout >= GUN_MAX_TIMEOUT:
-				gun_dist = gun_interpolate(gun_dist, GUN_DIST - gun_kickback, 2)
-				draw_muzzle_flash(muzzle_start)
-				add_trail(gun_end, angle)
-				gun_timeout = 0
-			else:
-				gun_timeout += gun_firerate
-		else:
-			gun_dist = gun_interpolate(gun_dist, GUN_DIST, 1)
-
-		# Draw
-		particle_draw()
-		draw_trail()
-		display.blit(player_sprite, (p_tmp_rect.x, p_tmp_rect.y))
-		pg.draw.line(display, gun_color, gun_start, gun_end, gun_width)
+		draw_trail(camera)
 
 		screen.blit(pg.transform.scale(display, (WINDOW_WIDTH, WINDOW_HEIGHT)), (0, 0))
 	
@@ -387,23 +494,23 @@ while running:
 				menu_show()
 				game = False
 
-			elif event.key == pg.K_w: player_movement["up"]    = True
-			elif event.key == pg.K_a: player_movement["left"]  = True
-			elif event.key == pg.K_s: player_movement["down"]  = True
-			elif event.key == pg.K_d: player_movement["right"] = True
+			elif event.key == pg.K_w: player.movement["up"]    = True
+			elif event.key == pg.K_a: player.movement["left"]  = True
+			elif event.key == pg.K_s: player.movement["down"]  = True
+			elif event.key == pg.K_d: player.movement["right"] = True
 
 		elif event.type == pg.KEYUP:
-			if event.key == pg.K_w: player_movement["up"]      = False
-			elif event.key == pg.K_a: player_movement["left"]  = False
-			elif event.key == pg.K_s: player_movement["down"]  = False
-			elif event.key == pg.K_d: player_movement["right"] = False
+			if event.key == pg.K_w: player.movement["up"]      = False
+			elif event.key == pg.K_a: player.movement["left"]  = False
+			elif event.key == pg.K_s: player.movement["down"]  = False
+			elif event.key == pg.K_d: player.movement["right"] = False
 
 		elif event.type == pg.MOUSEBUTTONDOWN:
 			if pg.mouse.get_pressed()[0]:
-				gun_fire = True
+				gun.fire = True
 		elif event.type == pg.MOUSEBUTTONUP:
 			if not pg.mouse.get_pressed()[0]:
-				gun_fire = False
+				gun.fire = False
 
 		# UI
 		elif event.type == pgui.UI_BUTTON_PRESSED:
