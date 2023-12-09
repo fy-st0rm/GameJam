@@ -39,6 +39,8 @@ WAVE_TIMER = time.time()
 WAVE_COUNT = 0
 WAVE_TIME = 10
 
+PLAYER_POS = [0,0]
+
 
 # Inits
 pg.init()
@@ -259,26 +261,44 @@ class Entity:
 			self.die()
 
 	def update_movement(self, dt: float) -> Self:
+			
 		if self.state != EntityState.DAMAGE:
 			self.state = EntityState.IDLE
 		self.vel = [0, 0]
 
-		if self.movement["left"]:
-			self.vel[0] -= self.speed * dt
-		if self.movement["right"]:
-			self.vel[0] += self.speed * dt
-		if self.movement["up"]:
-			self.vel[1] -= self.speed * dt
-		if self.movement["down"]:
-			self.vel[1] += self.speed * dt
+		if self.etype != EntityType.ENEMY:
 
-		if self.vel[0] or self.vel[1]:
-			self.state = EntityState.WALK
+			if self.movement["left"]:
+				self.vel[0] -= self.speed * dt
+			if self.movement["right"]:
+				self.vel[0] += self.speed * dt
+			if self.movement["up"]:
+				self.vel[1] -= self.speed * dt
+			if self.movement["down"]:
+				self.vel[1] += self.speed * dt
 
-		self.rect.x += self.vel[0]
-		self.rect.y += self.vel[1]
+			if self.vel[0] or self.vel[1]:
+				self.state = EntityState.WALK
 
-		return self
+			self.rect.x += self.vel[0]
+			self.rect.y += self.vel[1]
+
+			PLAYER_POS[0] = self.rect.x
+			PLAYER_POS[1] = self.rect.y
+
+			return self
+		else:
+
+			# Enemy Positions
+			# self.rect.y
+			# self.rect.x
+			
+			# Player Positions
+			# PLAYER_POS[0]
+			# PLAYER_POST[1]
+
+			# Returns own self
+			return self
 
 	def update_animation(self) -> Self:
 		self.trans_rect = self.rect.copy()
@@ -596,8 +616,6 @@ while running:
 			WAVE_TIMER = time.time()
 			ENEMY_TIMER -= 1
 			WAVE_TIME += 5
-
-
 
 		# Updating entities
 		for ent in entities:
