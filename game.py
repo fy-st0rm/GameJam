@@ -19,6 +19,7 @@ BG_COLOR = (36, 36, 36)
 SPRITE_SHEET = "assets/sprites.png"
 SPRITE_COLOR_KEY = (255, 0, 255)
 SPRITE_SIZE = 16
+ENTITY_SIZE = 16
 FPS = 60
 
 GUN_DIST = 15
@@ -225,6 +226,7 @@ class Entity:
 		self.health = 100
 		self.state = EntityState.IDLE
 		self.vel = [0, 0]
+
 		self.trans_rect = self.rect.copy()
 		self.org_sprite = self.sprite.copy()
 		self.dmg_sprite = self.sprite.copy()
@@ -260,46 +262,35 @@ class Entity:
 		if self.health <= 0:
 			self.die()
 
-	def update_movement(self, dt: float) -> Self:
-			
+	def update_vel(self) -> Self:
 		if self.state != EntityState.DAMAGE:
 			self.state = EntityState.IDLE
 		self.vel = [0, 0]
 
-		if self.etype != EntityType.ENEMY:
+		if self.movement["left"]:
+			self.vel[0] -= self.speed
+		if self.movement["right"]:
+			self.vel[0] += self.speed
+		if self.movement["up"]:
+			self.vel[1] -= self.speed
+		if self.movement["down"]:
+			self.vel[1] += self.speed
 
-			if self.movement["left"]:
-				self.vel[0] -= self.speed * dt
-			if self.movement["right"]:
-				self.vel[0] += self.speed * dt
-			if self.movement["up"]:
-				self.vel[1] -= self.speed * dt
-			if self.movement["down"]:
-				self.vel[1] += self.speed * dt
+		if self.vel[0] or self.vel[1]:
+			self.state = EntityState.WALK
 
-			if self.vel[0] or self.vel[1]:
-				self.state = EntityState.WALK
+		return self
 
-			self.rect.x += self.vel[0]
-			self.rect.y += self.vel[1]
+	def update_position(self, dt: float) -> Self:
+		self.rect.x += self.vel[0] * dt
+		calc_collision_hor(self)
+		self.rect.y += self.vel[1] * dt
+		calc_collision_vert(self)
 
-			PLAYER_POS[0] = self.rect.x
-			PLAYER_POS[1] = self.rect.y
+		PLAYER_POS[0] = self.rect.x
+		PLAYER_POS[1] = self.rect.y
 
-			return self
-		else:
-			
-
-			# Enemy Positions
-			# self.rect.y
-			# self.rect.x
-			
-			# Player Positions
-			# PLAYER_POS[0]
-			# PLAYER_POST[1]
-
-			# Returns own self
-			return self
+		return self
 
 	def update_animation(self) -> Self:
 		self.trans_rect = self.rect.copy()
@@ -342,7 +333,12 @@ class Entity:
 		return self
 
 	def draw(self, surface: pg.Surface, camera: list[float, float]):
-		surface.blit(self.sprite, (self.trans_rect.x - camera[0], self.trans_rect.y - camera[1]))
+		surface.blit(self.sprite,
+			(
+				self.trans_rect.x  - camera[0],
+				self.trans_rect.y  - camera[1]
+			)
+		)
 
 
 # Entity init
@@ -353,27 +349,19 @@ entities: list[Entity] = []
 player = Entity(
 	EntityType.PLAYER,
 	sprite_sheet_get(pg.Rect(2, 0, SPRITE_SIZE, SPRITE_SIZE)),
-	pg.Rect(0, 0, SPRITE_SIZE, SPRITE_SIZE),
+	pg.Rect(0, 0, ENTITY_SIZE, ENTITY_SIZE),
 	2
 )
 entities.append(player)
 
 
 # Enemy
-enemy = Entity(
-	EntityType.ENEMY,
-	sprite_sheet_get(pg.Rect(0, 0, SPRITE_SIZE, SPRITE_SIZE)),
-	pg.Rect(10, 10, SPRITE_SIZE, SPRITE_SIZE),
-	2
-)
-entities.append(enemy)
-
 def spawn_enemy(positions: list[tuple[int,int]]):
 	pos = random.choice(positions)
 	enemy = Entity(
 		EntityType.ENEMY,
 		sprite_sheet_get(pg.Rect(0, 0, SPRITE_SIZE, SPRITE_SIZE)),
-		pg.Rect(pos[0], pos[1], SPRITE_SIZE, SPRITE_SIZE),
+		pg.Rect(pos[0], pos[1], ENTITY_SIZE, ENTITY_SIZE),
 		2
 	)
 	entities.append(enemy)
@@ -564,6 +552,37 @@ DEFAULT_CONF = GunConf(
 gun = Gun(DEFAULT_CONF)
 
 
+# Collision
+
+def calc_hit_list(target: Entity) -> list[pg.Rect]:
+	hit_list = []
+
+	for ent in entities:
+		if ent != target:
+			if target.rect.colliderect(ent.rect):
+				hit_list.append(ent.rect)
+
+	return hit_list
+
+def calc_collision_hor(ent: Entity):
+	hit_list = calc_hit_list(ent)
+
+	for hit in hit_list:
+		if ent.vel[0] > 0:
+			ent.rect.right = hit.left
+		if ent.vel[0] < 0:
+			ent.rect.left = hit.right
+
+def calc_collision_vert(ent: Entity):
+	hit_list = calc_hit_list(ent)
+
+	for hit in hit_list:
+		if ent.vel[1] > 0:
+			ent.rect.bottom = hit.top
+		if ent.vel[1] < 0:
+			ent.rect.top = hit.bottom
+
+
 # Main loop
 enemy_timer = ENEMY_TIMER
 game = False
@@ -621,25 +640,22 @@ while running:
 		# Updating entities
 		for ent in entities:
 			if ent.etype == EntityType.PLAYER:
-				(
-					ent
-						.update_movement(dt)
-						.update_animation()
-						.draw(display, camera)
-				)
+					ent.update_vel()
 			else:
 				displacement_X = (PLAYER_POS[0] - ent.rect.x+0.000000000000000001)
 				displacement_Y = (PLAYER_POS[1] - ent.rect.y+0.000000000000000001)
 				movement_angle = math.atan(displacement_Y/displacement_X)
 				ent.vel[1] = 2*(abs(math.sin(movement_angle))/(	displacement_Y/	abs(displacement_Y)))
 				ent.vel[0] = 2*(math.cos(movement_angle)/(	displacement_X/	abs(displacement_X)))
-				ent.rect.x += ent.vel[0]
-				ent.rect.y += ent.vel[1]
-				(
-					ent
-						.update_animation()
-						.draw(display, camera)
-				)
+				# ent.rect.x += ent.vel[0]
+				# ent.rect.y += ent.vel[1]
+
+			(
+				ent
+					.update_position(dt)
+					.update_animation()
+					.draw(display, camera)
+			)
 		# Updaing gun
 		(
 			gun
@@ -664,7 +680,6 @@ while running:
 		ui_manager.update(t)
 		ui_manager.draw_ui(ui_surface)
 		screen.blit(ui_surface, (0, 0))
-		
 
 	# Event
 	for event in pg.event.get():
