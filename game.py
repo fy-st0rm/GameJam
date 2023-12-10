@@ -33,8 +33,9 @@ GUN_FIRERATE = 0.5
 GUN_COLOR = (255, 0, 0)
 
 ENEMY_SPAWN_VERTICES = [(0,0),(0,0),(0,0),(0,0)]
-
 ENEMY_TIMER = 5
+ENEMY_RANGE = 30
+ENEMY_DAMAGE = 1
 
 WAVE_TIMER = time.time()
 WAVE_COUNT = 0
@@ -81,7 +82,6 @@ quit_button = pgui.elements.UIButton(
 
 def menu_show():
 	title.show()
-	start_button.show()
 	quit_button.show()
 
 def menu_hide():
@@ -371,6 +371,14 @@ def spawn_enemy(positions: list[tuple[int,int]]):
 	)
 	entities.append(enemy)
 
+def check_attack_range(enemy: Entity, player: Entity) -> bool:
+	p1 = enemy.rect.center
+	p2 = player.rect.center
+	dist = math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
+	if dist <= ENEMY_RANGE:
+		return True
+	return False
+
 
 # Enemy Spawn Area
 enemy_spawn_area = pg.Rect(
@@ -565,7 +573,6 @@ gun = Gun(DEFAULT_CONF)
 
 
 # Collision
-
 def calc_hit_list(target: Entity) -> list[pg.Rect]:
 	hit_list = []
 
@@ -651,23 +658,33 @@ while running:
 
 		# Updating entities
 		for ent in entities:
+
+			# Updating velocity
 			if ent.etype == EntityType.PLAYER:
 					ent.update_vel()
 			else:
+				# Enemy AI
 				displacement_X = (PLAYER_POS[0] - ent.rect.x+0.000000000000000001)
 				displacement_Y = (PLAYER_POS[1] - ent.rect.y+0.000000000000000001)
 				movement_angle = math.atan(displacement_Y/displacement_X)
-				ent.vel[1] = 2*(abs(math.sin(movement_angle))/(	displacement_Y/	abs(displacement_Y)))
-				ent.vel[0] = 2*(math.cos(movement_angle)/(	displacement_X/	abs(displacement_X)))
-				# ent.rect.x += ent.vel[0]
-				# ent.rect.y += ent.vel[1]
+				ent.vel[1] = 2*(abs(math.sin(movement_angle))/(displacement_Y/abs(displacement_Y)))
+				ent.vel[0] = 2*(math.cos(movement_angle)/(displacement_X/abs(displacement_X)))
 
+				# Enemy attack
+				if check_attack_range(ent, player):
+					player.take_damage(ENEMY_DAMAGE)
+
+					if player.health <= 0:
+						game = False
+
+			# Updating position
 			(
 				ent
 					.update_position(dt)
 					.update_animation()
 					.draw(display, camera)
 			)
+
 		# Updaing gun
 		(
 			gun
@@ -684,11 +701,10 @@ while running:
 		wave_info = ui_font.render(f"Wave: {WAVE_COUNT}", False, (0,255,255))
 		screen.blit(wave_info, (0,0))
 		screen.blit(wave_timer_ui, (0,60))
-
-		
 	
 	# UI loop
 	else:
+		menu_show()
 		ui_surface.fill((0, 0, 0))
 		t = tick / 1000.0
 
@@ -703,11 +719,11 @@ while running:
 
 		# Controls
 		elif event.type == pg.KEYDOWN:
-			if event.key == pg.K_ESCAPE:
-				menu_show()
-				game = False
+			# if event.key == pg.K_ESCAPE:
+			# 	menu_show()
+			# 	game = False
 
-			elif event.key == pg.K_w: player.movement["up"]    = True
+			if event.key == pg.K_w: player.movement["up"]    = True
 			elif event.key == pg.K_a: player.movement["left"]  = True
 			elif event.key == pg.K_s: player.movement["down"]  = True
 			elif event.key == pg.K_d: player.movement["right"] = True
