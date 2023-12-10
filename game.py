@@ -41,6 +41,7 @@ WAVE_TIME = 10
 
 PLAYER_POS = [0,0]
 
+DAMAGE_TAKENS = []
 
 # Inits
 pg.init()
@@ -55,6 +56,7 @@ clock = pg.time.Clock()
 
 ui_font = pg.font.Font("assets/font.ttf", 50)
 ui_font_small = pg.font.Font("assets/font.ttf", 20)
+ui_font_damage = pg.font.Font("assets/font.ttf", 10)
 
 
 # Main menu
@@ -257,6 +259,9 @@ class Entity:
 		self.health -= damage
 		self.state = EntityState.DAMAGE
 
+		damage_text = ui_font_damage.render(f"-{damage}", False, (255,0,0))
+		DAMAGE_TAKENS.append({"pos": [self.rect.x,self.rect.y], "damage": damage_text, "time": time.time()})
+
 		if self.health <= 0:
 			self.die()
 
@@ -288,17 +293,6 @@ class Entity:
 
 			return self
 		else:
-			
-
-			# Enemy Positions
-			# self.rect.y
-			# self.rect.x
-			
-			# Player Positions
-			# PLAYER_POS[0]
-			# PLAYER_POST[1]
-
-			# Returns own self
 			return self
 
 	def update_animation(self) -> Self:
@@ -547,6 +541,13 @@ class Gun:
 			self.conf.width
 		)
 
+def draw_dmg(surface):
+	for index, damage in enumerate(DAMAGE_TAKENS):
+			surface.blit(damage["damage"], (damage["pos"][0] - camera[0], damage["pos"][1] - camera[1]))
+			if (time.time() - damage["time"]) > 2:
+				DAMAGE_TAKENS.pop(index)
+			else:
+				damage["pos"][1] -= 3
 
 # Gun init
 DEFAULT_CONF = GunConf(
@@ -600,7 +601,7 @@ while running:
 		ENEMY_SPAWN_VERTICES[1] = (enemy_spawn_area.x + enemy_spawn_area.width, enemy_spawn_area.y)
 		ENEMY_SPAWN_VERTICES[2] = (enemy_spawn_area.x + enemy_spawn_area.width, enemy_spawn_area.y + enemy_spawn_area.height)
 		ENEMY_SPAWN_VERTICES[3] = (enemy_spawn_area.x, enemy_spawn_area.y + enemy_spawn_area.height)
-
+		
 		# Enemy Timer
 		enemy_timer -= 0.1
 		if enemy_timer <= 0:
@@ -648,13 +649,16 @@ while running:
 				.update_trigger()
 				.draw(display, camera)
 		)
-
+		
+		draw_dmg(display)
 		draw_trail(camera)
 
 		screen.blit(pg.transform.scale(display, (WINDOW_WIDTH, WINDOW_HEIGHT)), (0, 0))
 		wave_info = ui_font.render(f"Wave: {WAVE_COUNT}", False, (0,255,255))
 		screen.blit(wave_info, (0,0))
 		screen.blit(wave_timer_ui, (0,60))
+
+		
 	
 	# UI loop
 	else:
