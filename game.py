@@ -288,6 +288,7 @@ class Entity:
 
 			return self
 		else:
+			
 
 			# Enemy Positions
 			# self.rect.y
@@ -619,13 +620,26 @@ while running:
 
 		# Updating entities
 		for ent in entities:
-			(
-				ent
-					.update_movement(dt)
-					.update_animation()
-					.draw(display, camera)
-			)
-
+			if ent.etype == EntityType.PLAYER:
+				(
+					ent
+						.update_movement(dt)
+						.update_animation()
+						.draw(display, camera)
+				)
+			else:
+				displacement_X = (PLAYER_POS[0] - ent.rect.x+0.000000000000000001)
+				displacement_Y = (PLAYER_POS[1] - ent.rect.y+0.000000000000000001)
+				movement_angle = math.atan(displacement_Y/displacement_X)
+				ent.vel[1] = 2*(abs(math.sin(movement_angle))/(	displacement_Y/	abs(displacement_Y)))
+				ent.vel[0] = 2*(math.cos(movement_angle)/(	displacement_X/	abs(displacement_X)))
+				ent.rect.x += ent.vel[0]
+				ent.rect.y += ent.vel[1]
+				(
+					ent
+						.update_animation()
+						.draw(display, camera)
+				)
 		# Updaing gun
 		(
 			gun
