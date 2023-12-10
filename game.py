@@ -44,6 +44,17 @@ WAVE_TIME = 10
 PLAYER_POS = [0,0]
 
 DAMAGE_TAKENS = []
+DAMAGE_DISPLAY_TIME = 2
+
+PLAYER_HEALTH = 100
+ENEMY_HEALTH = 100
+
+EXP_VAR = 0
+LVL = 0
+EXP_GAIN_NORMAL = 5
+EXP_MAX = 100
+EXP_MAX_GROWTH = 100
+EXP_GAINS = []
 
 # Inits
 pg.init()
@@ -60,6 +71,11 @@ ui_font = pg.font.Font("assets/font.ttf", 50)
 ui_font_small = pg.font.Font("assets/font.ttf", 20)
 ui_font_damage = pg.font.Font("assets/font.ttf", 10)
 
+# Health Bar
+health_bar = pg.Rect(10,570,400,20)
+
+# Exp Bar
+exp_bar = pg.Rect(10,500,400,20)
 
 # Main menu
 title = pgui.elements.UILabel(
@@ -210,7 +226,8 @@ class Entity:
 		etype: EntityType,
 		sprite: pg.Surface,
 		rect: pg.Rect,
-		speed: float
+		speed: float,
+		health: float
 	):
 		self.etype = etype
 		self.sprite = sprite
@@ -225,7 +242,7 @@ class Entity:
 			"down" : False
 		}
 
-		self.health = 100
+		self.health = health
 		self.state = EntityState.IDLE
 		self.vel = [0, 0]
 
@@ -258,11 +275,19 @@ class Entity:
 		)
 
 	def take_damage(self, damage: float):
+		global EXP_VAR
 		self.health -= damage
 		self.state = EntityState.DAMAGE
 
+		# damange taken
 		damage_text = ui_font_damage.render(f"-{damage}", False, (255,0,0))
 		DAMAGE_TAKENS.append({"pos": [self.rect.x,self.rect.y], "damage": damage_text, "time": time.time()})
+
+		# exp gaining
+		if self.etype == EntityType.ENEMY:
+			EXP_VAR += EXP_GAIN_NORMAL
+			exp_text = ui_font_damage.render(f"+{EXP_GAIN_NORMAL}", False, (0,255,70))
+			EXP_GAINS.append({"pos": [self.rect.x,self.rect.y], "exp": exp_text, "time": time.time()})
 
 		if self.health <= 0:
 			self.die()
@@ -355,7 +380,8 @@ player = Entity(
 	EntityType.PLAYER,
 	sprite_sheet_get(pg.Rect(2, 0, SPRITE_SIZE, SPRITE_SIZE)),
 	pg.Rect(0, 0, ENTITY_SIZE, ENTITY_SIZE),
-	2
+	2,
+	PLAYER_HEALTH
 )
 entities.append(player)
 
@@ -367,7 +393,8 @@ def spawn_enemy(positions: list[tuple[int,int]]):
 		EntityType.ENEMY,
 		sprite_sheet_get(pg.Rect(0, 0, SPRITE_SIZE, SPRITE_SIZE)),
 		pg.Rect(pos[0], pos[1], ENTITY_SIZE, ENTITY_SIZE),
-		2
+		2,
+		ENEMY_HEALTH
 	)
 	entities.append(enemy)
 
@@ -551,10 +578,19 @@ class Gun:
 def draw_dmg(surface):
 	for index, damage in enumerate(DAMAGE_TAKENS):
 			surface.blit(damage["damage"], (damage["pos"][0] - camera[0], damage["pos"][1] - camera[1]))
-			if (time.time() - damage["time"]) > 2:
+			if (time.time() - damage["time"]) > DAMAGE_DISPLAY_TIME:
 				DAMAGE_TAKENS.pop(index)
 			else:
 				damage["pos"][1] -= 3
+
+def draw_exp(surface):
+	for index, exp in enumerate(EXP_GAINS):
+			surface.blit(exp["exp"], (exp["pos"][0] - camera[0] - 20, exp["pos"][1] - camera[1]))
+			if (time.time() - exp["time"]) > DAMAGE_DISPLAY_TIME:
+				EXP_GAINS.pop(index)
+			else:
+				exp["pos"][1] -= 3
+
 
 # Gun init
 DEFAULT_CONF = GunConf(
@@ -655,6 +691,20 @@ while running:
 			WAVE_TIMER = time.time()
 			ENEMY_TIMER -= 1
 			WAVE_TIME += 5
+					
+		# updaing health bar
+		health_bar.w = (player.health/100) * 400
+		heal_num = ui_font_small.render(f"{player.health}/{PLAYER_HEALTH}",False,(255,0,0))
+
+		# updaing exp bar
+		exp_bar.w = (EXP_VAR/EXP_MAX) * 400
+		exp_num = ui_font_small.render(f"LVL: {LVL}",False,(0,255,70))
+
+		if(EXP_VAR >= EXP_MAX):
+			LVL += 1
+			EXP_MAX += EXP_MAX_GROWTH
+			EXP_VAR = 0
+
 
 		# Updating entities
 		for ent in entities:
@@ -694,14 +744,26 @@ while running:
 				.draw(display, camera)
 		)
 		
+		# Damage Showing
 		draw_dmg(display)
+		draw_exp(display)
+
+
 		draw_trail(camera)
 
 		screen.blit(pg.transform.scale(display, (WINDOW_WIDTH, WINDOW_HEIGHT)), (0, 0))
 		wave_info = ui_font.render(f"Wave: {WAVE_COUNT}", False, (0,255,255))
+
+		# Drawing Text On To Screen
 		screen.blit(wave_info, (0,0))
 		screen.blit(wave_timer_ui, (0,60))
-	
+		screen.blit(heal_num, (10,550))
+		screen.blit(exp_num, (10,480))
+
+		# Health / Exp Bar
+		pg.draw.rect(screen, (255,0,0), health_bar)
+		pg.draw.rect(screen, (0,255,70), exp_bar)
+
 	# UI loop
 	else:
 		menu_show()
