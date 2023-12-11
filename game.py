@@ -98,6 +98,7 @@ quit_button = pgui.elements.UIButton(
 
 def menu_show():
 	title.show()
+	start_button.show()
 	quit_button.show()
 
 def menu_hide():
@@ -638,6 +639,30 @@ def calc_collision_vert(ent: Entity):
 			ent.rect.top = hit.bottom
 
 
+# Reset
+def reset_game():
+	global WAVE_COUNT, WAVE_TIME, WAVE_TIMER, ENEMY_TIMER
+	global LVL, EXP_VAR, EXP_GAIN_NORMAL, EXP_MAX, EXP_MAX_GROWTH
+	global player, entities
+
+	WAVE_TIMER = time.time()
+	WAVE_COUNT = 0
+	WAVE_TIME = 10
+	ENEMY_TIMER = 5
+
+	EXP_VAR = 0
+	LVL = 0
+	EXP_GAIN_NORMAL = 5
+	EXP_MAX = 100
+	EXP_MAX_GROWTH = 100
+
+	player.rect.x = 0
+	player.rect.y = 0
+	player.health = PLAYER_HEALTH
+
+	entities.clear()
+	entities.append(player)
+
 # Main loop
 enemy_timer = ENEMY_TIMER
 game = False
@@ -809,6 +834,7 @@ while running:
 			if event.ui_element == start_button:
 				menu_hide()
 				game = True
+				reset_game()
 			elif event.ui_element == quit_button:
 				pg.event.post(pg.event.Event(pg.QUIT))
 
