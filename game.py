@@ -5,6 +5,7 @@ from particle import *
 from entity import *
 from containers import *
 from gun import *
+from gun_mode import *
 
 ENEMY_SPAWN_VERTICES = [(0,0),(0,0),(0,0),(0,0)]
 ENEMY_TIMER = 5
@@ -14,6 +15,7 @@ ENEMY_DAMAGE = 1
 WAVE_TIMER = time.time()
 WAVE_COUNT = 0
 WAVE_TIME = 10
+
 
 PREV_BOSS = 0
 BOSS_IN_EVERY = 0 #Waves
@@ -67,6 +69,8 @@ TOTAL_BOSS = 4
 FINAL_BOSS_SPRITE = pg.image.load("assets/final_boss.png")
 FINAL_BOSS_W = 32
 FINAL_BOSS_H = 32
+MODE_TIMER = time.time()
+
 
 # Inits
 pg.init()
@@ -215,19 +219,9 @@ enemy_spawn_area = pg.Rect(
 	400,400
 )
 
-# Gun init
-DEFAULT_CONF = GunConf(
-	GUN_DIST,
-	GUN_LEN,
-	GUN_WIDTH,
-	GUN_COLOR,
-	GUN_RANGE,
-	GUN_DAMAGE,
-	GUN_KICKBACK,
-	GUN_MAX_TIMEOUT,
-	GUN_FIRERATE
-)
-gun = Gun(DEFAULT_CONF)
+
+# Gun
+gun = GoingBananas()
 
 
 # Reset
@@ -437,6 +431,11 @@ while running:
 					.update_animation()
 					.draw(display, camera)
 			)
+
+		# Gun timer
+		if gun.type != GunType.DEFAULT:
+			if time.time() - MODE_TIMER >= gun.conf.lifetime:
+				gun = Default()
 
 		# Updaing gun
 		(

@@ -116,6 +116,9 @@ class Entity:
 				EXP_VAR += EXP_GAIN_BOSS
 			else:
 				EXP_VAR += EXP_GAIN_NORMAL
+
+		if self.etype == EntityType.ENEMY:
+			EXP_VAR += EXP_GAIN_NORMAL
 			exp_text = self.font.render(f"+{EXP_GAIN_NORMAL}", False, (0,255,70))
 			EXP_GAINS.append({
 				"pos": [self.rect.x, self.rect.y],
