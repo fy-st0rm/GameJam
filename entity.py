@@ -14,10 +14,12 @@ EXP_GAIN_NORMAL = 5
 EXP_MAX = 100         # Increases every level increased
 EXP_MAX_GROWTH = 100
 LVL = 0
+
 def get_exp_var() -> int:
 	return EXP_VAR
 
 def set_exp_var(x: int) -> None:
+	global EXP_VAR
 	EXP_VAR = x
 
 class EntityType:
