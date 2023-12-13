@@ -14,7 +14,11 @@ EXP_GAIN_NORMAL = 5
 EXP_MAX = 100         # Increases every level increased
 EXP_MAX_GROWTH = 100
 LVL = 0
+def get_exp_var() -> int:
+	return EXP_VAR
 
+def set_exp_var(x: int) -> None:
+	EXP_VAR = x
 
 class EntityType:
 	PLAYER = 0
@@ -96,8 +100,10 @@ class Entity:
 			"time": time.time()
 		})
 
+		print("Damage Taken")
 		# exp gaining
 		if self.etype == EntityType.ENEMY:
+			print(EXP_VAR)
 			EXP_VAR += EXP_GAIN_NORMAL
 			exp_text = self.font.render(f"+{EXP_GAIN_NORMAL}", False, (0,255,70))
 			EXP_GAINS.append({

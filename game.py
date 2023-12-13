@@ -151,7 +151,7 @@ def reset_game():
 	WAVE_TIME = 10
 	ENEMY_TIMER = 5
 
-	EXP_VAR = 0
+	set_exp_var(0)
 	LVL = 0
 	EXP_GAIN_NORMAL = 5
 	EXP_MAX = 100
@@ -223,13 +223,13 @@ while running:
 		heal_num = ui_font_small.render(f"{player.health}/{PLAYER_HEALTH}",False,(255,0,0))
 
 		# updaing exp bar
-		exp_bar.w = (EXP_VAR/EXP_MAX) * 400
+		exp_bar.w = (get_exp_var()/EXP_MAX) * 400
 		exp_num = ui_font_small.render(f"LVL: {LVL}",False,(0,255,70))
 
-		if(EXP_VAR >= EXP_MAX):
+		if(get_exp_var() >= EXP_MAX):
 			LVL += 1
 			EXP_MAX += EXP_MAX_GROWTH
-			EXP_VAR = 0
+			set_exp_var(0)
 
 		# Updating entities
 		for ent in ENTITIES:
