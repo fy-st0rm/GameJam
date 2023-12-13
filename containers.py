@@ -1,0 +1,7 @@
+DAMAGE_TAKENS = []
+EXP_GAINS = []
+ENTITIES = []
+PARTICLES = []
+TRAILS = []
+
+
