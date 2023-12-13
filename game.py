@@ -16,8 +16,62 @@ WAVE_TIMER = time.time()
 WAVE_COUNT = 0
 WAVE_TIME = 10
 
+
+PREV_BOSS = 0
+BOSS_IN_EVERY = 0 #Waves
+BOSS_INCOMMING = False
+
+BOSS_ALERT_BACKGROUND = pg.Rect(0,0,800,600)
+BOSS_ALERT_TIMER = time.time()
+BOSS_WAVE = False
+
+BOSS_SPAWNED = False
+BOSS_COUNT = 1
+
+BOSS_DMG_1 = 3
+BOSS_DMG_2 = 5
+BOSS_DMG_3 = 7
+BOSS_DMG_4 = 7
+
+BOSS_HP_1 = 100
+BOSS_HP_2 = 100
+BOSS_HP_3 = 100
+BOSS_HP_4 = 100
+
+BOSS_DMG_1 = 3
+BOSS_DMG_2 = 5
+BOSS_DMG_3 = 7
+BOSS_DMG_4 = 7
+
+BOSS_SPEED_1 = 2
+BOSS_SPEED_2 = 1
+BOSS_SPEED_3 = 0.5
+BOSS_SPEED_4 = 0.5
+
+BOSS_RANGE_1 = 30
+BOSS_RANGE_2 = 50
+BOSS_RANGE_3 = 50
+BOSS_RANGE_4 = 50
+
+
+CURRENT_DAMAGE = ENEMY_DAMAGE
+CURRENT_HP = BOSS_HP_1
+CURRENT_SPEED = BOSS_SPEED_1
+CURRENT_RANGE = ENEMY_RANGE
+CURRENT_BOSS_IMG = 0
+
+BOSS_IMG_1 = 0
+BOSS_IMG_2 = 1
+BOSS_IMG_3 = 3
+
+TOTAL_BOSS = 4
+
+FINAL_BOSS_SPRITE = pg.image.load("assets/final_boss.png")
+FINAL_BOSS_W = 32
+FINAL_BOSS_H = 32
 MODE_TIMER = time.time()
 MODE_CURR = 0
+
 
 # Inits
 pg.init()
@@ -40,6 +94,10 @@ health_bar = pg.Rect(10,570,400,20)
 # Exp Bar
 exp_bar = pg.Rect(10,500,400,20)
 
+# Boss Hp
+boss_hp_bar = pg.Rect(400,30,400,20)
+
+
 # Main menu
 title = pgui.elements.UILabel(
 	relative_rect = pg.Rect(300, 100, 200, 50),
@@ -58,6 +116,18 @@ quit_button = pgui.elements.UIButton(
 	text = "Quit",
 	manager = ui_manager
 )
+
+def boss_alert_show():
+	global BOSS_INCOMMING
+	global player
+	pg.draw.rect(screen,(0,0,0,0),BOSS_ALERT_BACKGROUND)
+	screen.blit(boss_alert,(200,300))
+	player.rect.x = 0
+	player.rect.y = 0
+	if (time.time() - BOSS_ALERT_TIMER) >= 2:
+		BOSS_INCOMMING = False
+	
+
 
 def menu_show():
 	title.show()
@@ -102,16 +172,38 @@ ENTITIES.append(player)
 
 # Enemy
 def spawn_enemy(positions: list[tuple[int,int]]):
-	pos = random.choice(positions)
-	enemy = Entity(
-		EntityType.ENEMY,
-		sprite_sheet_get(pg.Rect(0, 0, SPRITE_SIZE, SPRITE_SIZE)),
-		pg.Rect(pos[0], pos[1], ENTITY_SIZE, ENTITY_SIZE),
-		2,
-		ENEMY_HEALTH,
-		ui_font_damage
-	)
-	ENTITIES.append(enemy)
+	if not BOSS_WAVE:
+		pos = random.choice(positions)
+		enemy = Entity(
+			EntityType.ENEMY,
+			sprite_sheet_get(pg.Rect(4, 0, SPRITE_SIZE, SPRITE_SIZE)),
+			pg.Rect(pos[0], pos[1], ENTITY_SIZE, ENTITY_SIZE),
+			2,
+			ENEMY_HEALTH,
+			ui_font_damage
+		)
+		ENTITIES.append(enemy)
+	
+	if BOSS_WAVE and not BOSS_INCOMMING:
+		global BOSS_SPAWNED
+		if BOSS_SPAWNED == False:
+			pos = random.choice(positions)
+			if BOSS_COUNT == 5:
+				ss = CURRENT_BOSS_IMG
+			else:
+				ss = sprite_sheet_get(pg.Rect(CURRENT_BOSS_IMG, 0, SPRITE_SIZE, SPRITE_SIZE))
+			enemy = Entity(
+				EntityType.BOSS,
+				ss,
+				pg.Rect(pos[0], pos[1], ENTITY_SIZE, ENTITY_SIZE),
+				CURRENT_SPEED,
+				CURRENT_HP,
+				ui_font_damage,
+				reset_boss
+			)
+			ENTITIES.append(enemy)
+			BOSS_SPAWNED = True
+
 
 def check_attack_range(enemy: Entity, player: Entity) -> bool:
 	p1 = enemy.rect.center
@@ -150,6 +242,15 @@ def reset_game():
 	global WAVE_COUNT, WAVE_TIME, WAVE_TIMER, ENEMY_TIMER
 	global LVL, EXP_VAR, EXP_GAIN_NORMAL, EXP_MAX, EXP_MAX_GROWTH
 	global player, ENTITIES
+	global BOSS_WAVE, BOSS_SPAWNED, CURRENT_SPEED, CURRENT_HP, CURRENT_DAMAGE, BOSS_COUNT, CURRENT_RANGE, ENTITY_SIZE
+
+	BOSS_WAVE = False
+	BOSS_SPAWNED = False
+	CURRENT_SPEED = 2
+	CURRENT_HP = ENEMY_HEALTH
+	CURRENT_DAMAGE = 1
+	BOSS_COUNT = 1
+	CURRENT_RANGE = ENEMY_RANGE
 
 	WAVE_TIMER = time.time()
 	WAVE_COUNT = 0
@@ -166,6 +267,8 @@ def reset_game():
 	player.rect.y = 0
 	player.health = PLAYER_HEALTH
 
+	ENTITY_SIZE = 16
+
 	ENTITIES.clear()
 	ENTITIES.append(player)
 
@@ -177,7 +280,17 @@ last_time = time.time()
 
 wave_info = ui_font.render(f"Wave: {WAVE_COUNT}", False, (0,255,255))
 
+def reset_boss():
+	global BOSS_SPAWNED, CURRENT_SPEED, CURRENT_HP, CURRENT_DAMAGE, BOSS_WAVE, ENTITY_SIZE
+	BOSS_WAVE = False
+	BOSS_SPAWNED = False
+	CURRENT_SPEED = 2
+	CURRENT_HP = ENEMY_HEALTH
+	CURRENT_DAMAGE = 1
+	ENTITY_SIZE = 16
+
 while running:
+	
 	# Calculating delta time
 	dt = time.time() - last_time
 	dt *= FPS
@@ -223,6 +336,13 @@ while running:
 			ENEMY_TIMER -= 1
 			WAVE_TIME += 5
 
+		if not BOSS_WAVE:
+			if (wave_timer - WAVE_TIMER) >= WAVE_TIME:
+				WAVE_COUNT += 1
+				WAVE_TIMER = time.time()
+				ENEMY_TIMER -= 1
+				WAVE_TIME += 5
+					
 		# updaing health bar
 		health_bar.w = (player.health/100) * 400
 		heal_num = ui_font_small.render(f"{player.health}/{PLAYER_HEALTH}",False,(255,0,0))
@@ -230,6 +350,24 @@ while running:
 		# updaing exp bar
 		exp_bar.w = (get_exp_var()/EXP_MAX) * 400
 		exp_num = ui_font_small.render(f"LVL: {LVL}",False,(0,255,70))
+
+		# updaing exp bar
+		tot_hp = 1
+		c_hp = 0
+		for ent in ENTITIES:
+			if ent.etype == EntityType.BOSS:
+				print(BOSS_COUNT)
+				c_hp = ent.health
+				if BOSS_COUNT == 2:
+					tot_hp = BOSS_HP_1
+				if BOSS_COUNT == 3:
+					tot_hp = BOSS_HP_2
+				if BOSS_COUNT == 4:
+					tot_hp = BOSS_HP_3
+				if BOSS_COUNT > 4:
+					tot_hp == BOSS_HP_4
+		boss_hp_bar.w = (c_hp/tot_hp) * 400
+		boss_hp_txt = ui_font_small.render(f"hp: {c_hp}/{tot_hp}",False,(0,255,70))
 
 		if(get_exp_var() >= EXP_MAX):
 			LVL += 1
@@ -244,11 +382,57 @@ while running:
 				ACCUIRED_MODES.append(going_bananas)
 
 		# Updating entities
-		for ent in ENTITIES:
+		for i,ent in enumerate(ENTITIES):
+			if BOSS_INCOMMING:
+				if ent.etype == EntityType.ENEMY:
+					ENTITIES.pop(i)
+			if not BOSS_WAVE:
+				if (WAVE_COUNT - PREV_BOSS) >= BOSS_IN_EVERY:
+					if BOSS_COUNT <= TOTAL_BOSS:
+						BOSS_WAVE = True
+						BOSS_ALERT_TIMER = time.time()
+						BOSS_INCOMMING = True
+
+					if BOSS_COUNT == 1:
+						CURRENT_DAMAGE = BOSS_DMG_1
+						CURRENT_HP = BOSS_HP_1
+						CURRENT_SPEED = BOSS_SPEED_1
+						CURRENT_RANGE = BOSS_RANGE_1
+						CURRENT_BOSS_IMG = BOSS_IMG_1
+					
+					if BOSS_COUNT == 2:
+						CURRENT_DAMAGE = BOSS_DMG_2
+						CURRENT_HP = BOSS_HP_2
+						CURRENT_SPEED = BOSS_SPEED_2
+						CURRENT_RANGE = BOSS_RANGE_2
+						CURRENT_BOSS_IMG = BOSS_IMG_2
+
+					if BOSS_COUNT == 3:
+						CURRENT_DAMAGE = BOSS_DMG_3
+						CURRENT_HP = BOSS_HP_3
+						CURRENT_SPEED = BOSS_SPEED_3
+						CURRENT_RANGE = BOSS_RANGE_3
+						CURRENT_BOSS_IMG = BOSS_IMG_3
+					
+					if BOSS_COUNT == 4:
+						CURRENT_BOSS_IMG = FINAL_BOSS_SPRITE
+						ENTITY_SIZE = FINAL_BOSS_H
+						CURRENT_DAMAGE = BOSS_DMG_4
+						CURRENT_HP = BOSS_HP_4
+						CURRENT_SPEED = BOSS_SPEED_4
+						CURRENT_RANGE = BOSS_RANGE_4
+
+
+
+					if BOSS_COUNT <= TOTAL_BOSS:
+						PREV_BOSS = WAVE_COUNT
+						BOSS_COUNT += 1
+						
+				
 
 			# Updating velocity
 			if ent.etype == EntityType.PLAYER:
-					ent.update_vel()
+				ent.update_vel()
 			else:
 				# Enemy AI
 				displacement_X = (player.rect.x - ent.rect.x+0.000000000000000001)
@@ -259,7 +443,7 @@ while running:
 
 				# Enemy attack
 				if check_attack_range(ent, player):
-					player.take_damage(ENEMY_DAMAGE)
+					player.take_damage(CURRENT_DAMAGE)
 
 					if player.health <= 0:
 						game = False
@@ -298,11 +482,18 @@ while running:
 		screen.blit(pg.transform.scale(display, (WINDOW_WIDTH, WINDOW_HEIGHT)), (0, 0))
 		wave_info = ui_font.render(f"Wave: {WAVE_COUNT}", False, (0,255,255))
 
+		boss_alert = ui_font.render(f"BOSS INCOMMING!", False, (255,0,0))
+
 		# Drawing Text On To Screen
 		screen.blit(wave_info, (0,0))
 		screen.blit(wave_timer_ui, (0,60))
 		screen.blit(heal_num, (10,550))
 		screen.blit(exp_num, (10,480))
+
+		if BOSS_WAVE:
+			screen.blit(boss_hp_txt, (400, 5))
+			pg.draw.rect(screen, (255,0,0), boss_hp_bar)
+
 
 		# Health / Exp Bar
 		pg.draw.rect(screen, (255,0,0), health_bar)
@@ -310,6 +501,9 @@ while running:
 
 		# Drawing modes
 		render_gun_modes(screen)
+
+		if BOSS_INCOMMING == True:
+			boss_alert_show()
 
 	# UI loop
 	else:
