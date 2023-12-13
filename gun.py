@@ -5,7 +5,6 @@ from particle import *
 from entity import *
 from gmath import *
 
-
 GUN_DIST = 15
 GUN_LEN  = 10
 GUN_WIDTH = 1
@@ -15,6 +14,7 @@ GUN_KICKBACK = 5
 GUN_MAX_TIMEOUT = 5
 GUN_FIRERATE = 0.5
 GUN_COLOR = (255, 0, 0)
+GUN_LIFETIME = 0
 
 
 @dataclass
@@ -28,6 +28,7 @@ class GunConf:
 	kickback: float
 	timeout: float
 	firerate: float
+	lifetime: float
 
 class Gun:
 	def __init__(self, conf: GunConf):
@@ -117,23 +118,16 @@ class Gun:
 
 		return self
 
+	def generate_trails(self):
+		assert(False, "Generate trail hasnt been implemented")
+
 	def update_trigger(self) -> Self:
 		if self.fire:
 			if self.conf.timeout >= GUN_MAX_TIMEOUT:
 				self.conf.timeout = 0
-
 				self.conf.dist = interpolate(self.conf.dist, GUN_DIST - self.conf.kickback, 2)
-
 				self.draw_muzzle_flash(self.muzzle_start)
-
-				trail_start = self.gun_end
-				trail_end = [
-					trail_start[0] + self.conf.range * math.cos(math.radians(self.angle)),
-					trail_start[1] + self.conf.range * math.sin(math.radians(self.angle))
-				]
-				add_trail(trail_start, trail_end, self.angle)
-
-				self.check_hit(trail_start, trail_end)
+				self.generate_trails()
 			else:
 				self.conf.timeout += self.conf.firerate
 		else:
