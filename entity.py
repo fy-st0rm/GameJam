@@ -11,6 +11,7 @@ from gmath import *
 # Exp
 EXP_VAR = 0
 EXP_GAIN_NORMAL = 5
+EXP_GAIN_BOSS = 20
 EXP_MAX = 100         # Increases every level increased
 EXP_MAX_GROWTH = 100
 LVL = 0
@@ -25,6 +26,7 @@ def set_exp_var(x: int) -> None:
 class EntityType:
 	PLAYER = 0
 	ENEMY  = 1
+	BOSS = 3
 
 class EntityState:
 	IDLE = 0
@@ -40,7 +42,8 @@ class Entity:
 		rect: pg.Rect,
 		speed: float,
 		health: float,
-		font: pg.font.Font
+		font: pg.font.Font,
+		reset_boss = None
 	):
 		self.etype = etype
 		self.sprite = sprite
@@ -65,7 +68,12 @@ class Entity:
 		self.dmg_sprite = self.sprite.copy()
 		self.dmg_sprite.fill((90, 0, 0, 0), special_flags = pg.BLEND_ADD)
 
+		self.reset_boss = reset_boss
+
 	def die(self):
+		if self.etype == EntityType.BOSS:
+			self.reset_boss()
+		
 		ENTITIES.remove(self)
 		pos = [self.rect.x + self.rect.w / 2, self.rect.y + self.rect.h / 2]
 
@@ -102,11 +110,12 @@ class Entity:
 			"time": time.time()
 		})
 
-		print("Damage Taken")
 		# exp gaining
-		if self.etype == EntityType.ENEMY:
-			print(EXP_VAR)
-			EXP_VAR += EXP_GAIN_NORMAL
+		if self.etype == EntityType.ENEMY or self.etype == EntityType.BOSS:
+			if self.etype == EntityType.BOSS:
+				EXP_VAR += EXP_GAIN_BOSS
+			else:
+				EXP_VAR += EXP_GAIN_NORMAL
 			exp_text = self.font.render(f"+{EXP_GAIN_NORMAL}", False, (0,255,70))
 			EXP_GAINS.append({
 				"pos": [self.rect.x, self.rect.y],

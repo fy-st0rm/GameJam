@@ -79,7 +79,7 @@ class Gun:
 
 	def check_hit(self, trail_start: list[float, float], trail_end: list[float, float]):
 		for ent in ENTITIES:
-			if ent.etype == EntityType.ENEMY:
+			if ent.etype == EntityType.ENEMY or ent.etype == EntityType.BOSS:
 				if ent.rect.clipline(trail_start, trail_end):
 					ent.take_damage(self.conf.damage);
 
