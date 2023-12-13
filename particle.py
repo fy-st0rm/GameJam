@@ -65,6 +65,14 @@ def draw_trail(surface: pg.Surface, camera: list[float, float]):
 			TRAILS.remove(trail)
 
 
+# Grenade system
+@dataclass
+class Grenade:
+	angle: float
+	start_pos: list[float, float]
+	end_pos: list[float, float]
+
+
 def draw_dmg(surface: pg.Surface, camera: list[float, float]):
 	for index, damage in enumerate(DAMAGE_TAKENS):
 			surface.blit(damage["damage"], (damage["pos"][0] - camera[0], damage["pos"][1] - camera[1]))

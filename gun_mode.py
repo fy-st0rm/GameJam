@@ -5,6 +5,7 @@ class GunType:
 	DEFAULT = 0
 	SHAWTY = 1
 	GOINGBANANAS = 2
+	GRENADE_LAUNCHER = 3
 
 
 DEFAULT_CONF = GunConf(
@@ -83,7 +84,7 @@ class GoingBananas(Gun):
 			dist = GUN_DIST,
 			len  = 13,
 			width = 1,
-			color = (10, 10, 10),
+			color = (180, 180, 10),
 			range = 500,
 			damage = 70,
 			kickback = 5,
@@ -102,3 +103,28 @@ class GoingBananas(Gun):
 		add_trail(trail_start, trail_end, self.angle)
 		self.check_hit(trail_start, trail_end)
 
+
+class GrenadeLauncher(Gun):
+	def __init__(self):
+		self.type = GunType.GRENADE_LAUNCHER
+		self.conf: GunConf = GunConf(
+			dist = GUN_DIST,
+			len  = 9,
+			width = 3,
+			color = (10, 10, 10),
+			range = 100,
+			damage = 30,
+			kickback = 5,
+			timeout = 5,
+			firerate = 0.3,
+			lifetime = 10
+		)
+		super().__init__(self.conf)
+
+	def generate_trails(self):
+		trail_start = self.gun_end
+		trail_end = [
+			trail_start[0] + self.conf.range * math.cos(math.radians(self.angle)),
+			trail_start[1] + self.conf.range * math.sin(math.radians(self.angle))
+		]
+		self.check_hit(trail_start, trail_end)

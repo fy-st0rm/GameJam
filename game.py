@@ -17,6 +17,7 @@ WAVE_COUNT = 0
 WAVE_TIME = 10
 
 MODE_TIMER = time.time()
+MODE_CURR = 0
 
 # Inits
 pg.init()
@@ -129,7 +130,19 @@ enemy_spawn_area = pg.Rect(
 
 
 # Gun
-gun = GoingBananas()
+default = Default()
+shawty = Shawty()
+going_bananas = GoingBananas()
+
+ACCUIRED_MODES.append(default)
+gun = ACCUIRED_MODES[MODE_CURR]
+
+def render_gun_modes(surface: pg.Surface):
+	for x, mode in enumerate(ACCUIRED_MODES):
+		p = x * 50
+		if x == MODE_CURR:
+			pg.draw.circle(surface, (255, 255, 255), (600 + p, 50), 23)
+		pg.draw.circle(surface, mode.conf.color, (600 + p, 50), 20)
 
 
 # Reset
@@ -209,7 +222,7 @@ while running:
 			WAVE_TIMER = time.time()
 			ENEMY_TIMER -= 1
 			WAVE_TIME += 5
-					
+
 		# updaing health bar
 		health_bar.w = (player.health/100) * 400
 		heal_num = ui_font_small.render(f"{player.health}/{PLAYER_HEALTH}",False,(255,0,0))
@@ -223,6 +236,13 @@ while running:
 			EXP_MAX += EXP_MAX_GROWTH
 			set_exp_var(0)
 
+		if LVL == 0:
+			if shawty not in ACCUIRED_MODES:
+				ACCUIRED_MODES.append(shawty)
+		elif LVL == 1:
+			if going_bananas not in ACCUIRED_MODES:
+				ACCUIRED_MODES.append(going_bananas)
+
 		# Updating entities
 		for ent in ENTITIES:
 
@@ -234,8 +254,8 @@ while running:
 				displacement_X = (player.rect.x - ent.rect.x+0.000000000000000001)
 				displacement_Y = (player.rect.y - ent.rect.y+0.000000000000000001)
 				movement_angle = math.atan(displacement_Y/displacement_X)
-				ent.vel[1] = 2*(abs(math.sin(movement_angle))/(displacement_Y/abs(displacement_Y)))
-				ent.vel[0] = 2*(math.cos(movement_angle)/(displacement_X/abs(displacement_X)))
+				# ent.vel[1] = 2*(abs(math.sin(movement_angle))/(displacement_Y/abs(displacement_Y)))
+				# ent.vel[0] = 2*(math.cos(movement_angle)/(displacement_X/abs(displacement_X)))
 
 				# Enemy attack
 				if check_attack_range(ent, player):
@@ -253,9 +273,12 @@ while running:
 			)
 
 		# Gun timer
+		gun = ACCUIRED_MODES[MODE_CURR]
 		if gun.type != GunType.DEFAULT:
 			if time.time() - MODE_TIMER >= gun.conf.lifetime:
-				gun = Default()
+				ACCUIRED_MODES.remove(gun)
+				MODE_TIMER = time.time()
+				MODE_CURR = 0
 
 		# Updaing gun
 		(
@@ -269,7 +292,6 @@ while running:
 		# Damage Showing
 		draw_dmg(display, camera)
 		draw_exp(display, camera)
-
 
 		draw_trail(display, camera)
 
@@ -285,6 +307,9 @@ while running:
 		# Health / Exp Bar
 		pg.draw.rect(screen, (255,0,0), health_bar)
 		pg.draw.rect(screen, (0,255,70), exp_bar)
+
+		# Drawing modes
+		render_gun_modes(screen)
 
 	# UI loop
 	else:
@@ -303,14 +328,17 @@ while running:
 
 		# Controls
 		elif event.type == pg.KEYDOWN:
-			# if event.key == pg.K_ESCAPE:
-			# 	menu_show()
-			# 	game = False
-
 			if event.key == pg.K_w: player.movement["up"]    = True
 			elif event.key == pg.K_a: player.movement["left"]  = True
 			elif event.key == pg.K_s: player.movement["down"]  = True
 			elif event.key == pg.K_d: player.movement["right"] = True
+
+			elif event.key == pg.K_2:
+				if len(ACCUIRED_MODES) >= 2 and ACCUIRED_MODES[MODE_CURR].type == GunType.DEFAULT:
+					MODE_CURR = 1
+			elif event.key == pg.K_3:
+				if len(ACCUIRED_MODES) >= 3 and ACCUIRED_MODES[MODE_CURR].type == GunType.DEFAULT:
+					MODE_CURR = 2
 
 		elif event.type == pg.KEYUP:
 			if event.key == pg.K_w: player.movement["up"]      = False
