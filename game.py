@@ -18,7 +18,7 @@ WAVE_TIME = 10
 
 
 PREV_BOSS = 0
-BOSS_IN_EVERY = 0 #Waves
+BOSS_IN_EVERY = 3 #Waves
 BOSS_INCOMMING = False
 
 BOSS_ALERT_BACKGROUND = pg.Rect(0,0,800,600)
@@ -72,6 +72,11 @@ FINAL_BOSS_H = 32
 MODE_TIMER = time.time()
 MODE_CURR = 0
 
+MODE_IN_EVERY = 1
+PREV_LVL_MODE = 0
+
+MODE_INFO_TIME = time.time()
+MODE_UI_TIME = 0
 
 # Inits
 pg.init()
@@ -289,8 +294,12 @@ def reset_boss():
 	CURRENT_DAMAGE = 1
 	ENTITY_SIZE = 16
 
-while running:
+aquired_mode_txt = ui_font_small.render(f"", False, (255,255,255))
 
+current_mode_txt = ui_font_small.render(f"Current Mode: None", False, (255,255,255))
+
+while running:
+	MODE_UI_TIME = time.time() - MODE_TIMER
 	# Calculating delta time
 	dt = time.time() - last_time
 	dt *= FPS
@@ -332,6 +341,7 @@ while running:
 		wave_timer_ui = ui_font_small.render(f"Wave Timer: {int(wave_timer - WAVE_TIMER)}s", False, (0,255,255))
 		if (wave_timer - WAVE_TIMER) >= WAVE_TIME:
 			WAVE_COUNT += 1
+			player.health = 100
 			WAVE_TIMER = time.time()
 			ENEMY_TIMER -= 1
 			WAVE_TIME += 5
@@ -367,19 +377,25 @@ while running:
 					tot_hp = BOSS_HP_4
 		boss_hp_bar.w = (c_hp/tot_hp) * 400
 		boss_hp_txt = ui_font_small.render(f"hp: {c_hp}/{tot_hp}",False,(0,255,70))
+		
 
 		if(get_exp_var() >= EXP_MAX):
 			LVL += 1
 			EXP_MAX += EXP_MAX_GROWTH
 			set_exp_var(0)
+			modes = [shawty,going_bananas]
+			mode = random.choice(modes)
+			
+			if mode not in ACCUIRED_MODES:
+				ACCUIRED_MODES.append(mode)
+				aquired_mode_txt = ui_font_small.render(f"AQUIRED MODE: {mode.type}", False, (255,255,255))
+					
+		if time.time() - MODE_INFO_TIME > 2:
+			aquired_mode_txt = ui_font_small.render(f"",False,(255,255,255))
+			MODE_INFO_TIME = time.time()
+			
 
-		#if LVL == 0:
-		if shawty not in ACCUIRED_MODES:
-			ACCUIRED_MODES.append(shawty)
-		#elif LVL == 1:
-		if going_bananas not in ACCUIRED_MODES:
-			ACCUIRED_MODES.append(going_bananas)
-
+				
 		# Updating entities
 		for i,ent in enumerate(ENTITIES):
 			if BOSS_INCOMMING:
@@ -457,6 +473,7 @@ while running:
 		gun = ACCUIRED_MODES[MODE_CURR]
 		if gun.type != GunType.DEFAULT:
 			if time.time() - MODE_TIMER >= gun.conf.lifetime:
+				current_mode_txt = ui_font_small.render(f"Current Mode: None", False, (255,255,255))
 				ACCUIRED_MODES.remove(gun)
 				MODE_TIMER = time.time()
 				MODE_CURR = 0
@@ -486,6 +503,8 @@ while running:
 		screen.blit(wave_timer_ui, (0,60))
 		screen.blit(heal_num, (10,550))
 		screen.blit(exp_num, (10,480))
+		screen.blit(aquired_mode_txt, (300,480))
+		screen.blit(current_mode_txt, (0,80))
 
 		if BOSS_WAVE:
 			screen.blit(boss_hp_txt, (400, 5))
@@ -527,9 +546,13 @@ while running:
 			elif event.key == pg.K_2:
 				if len(ACCUIRED_MODES) >= 2 and ACCUIRED_MODES[MODE_CURR].type == GunType.DEFAULT:
 					MODE_CURR = 1
+					MODE_TIMER = time.time()
+					current_mode_txt = ui_font_small.render(f"Current Mode: {ACCUIRED_MODES[MODE_CURR].type}", False, (255,255,255))
 			elif event.key == pg.K_3:
 				if len(ACCUIRED_MODES) >= 3 and ACCUIRED_MODES[MODE_CURR].type == GunType.DEFAULT:
 					MODE_CURR = 2
+					MODE_TIMER = time.time()
+					current_mode_txt = ui_font_small.render(f"Current Mode: {ACCUIRED_MODES[MODE_CURR].type}", False, (255,255,255))
 
 		elif event.type == pg.KEYUP:
 			if event.key == pg.K_w: player.movement["up"]      = False
