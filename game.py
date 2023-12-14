@@ -403,7 +403,7 @@ while running:
 			lvl_up_sound.play()
 			EXP_MAX += EXP_MAX_GROWTH
 			set_exp_var(0)
-			modes = [shawty,going_bananas]
+			modes = [shawty,going_bananas, grenade_launcher]
 			mode = random.choice(modes)
 			
 			if mode not in ACCUIRED_MODES:
@@ -413,19 +413,7 @@ while running:
 		if time.time() - MODE_INFO_TIME > 2:
 			aquired_mode_txt = ui_font_small.render(f"",False,(255,255,255))
 			MODE_INFO_TIME = time.time()
-			
 
-<<<<<<< HEAD
-		if shawty not in ACCUIRED_MODES:
-			ACCUIRED_MODES.append(shawty)
-		if going_bananas not in ACCUIRED_MODES:
-			ACCUIRED_MODES.append(going_bananas)
-		if grenade_launcher not in ACCUIRED_MODES:
-			ACCUIRED_MODES.append(grenade_launcher)
-
-=======
-				
->>>>>>> 3e1ab004631aafc8e7d3a34c37ee5b05c14e71ad
 		# Updating entities
 		for i,ent in enumerate(ENTITIES):
 			if BOSS_INCOMMING:
@@ -585,15 +573,12 @@ while running:
 				if len(ACCUIRED_MODES) >= 3 and ACCUIRED_MODES[MODE_CURR].type == GunType.DEFAULT:
 					MODE_TIMER = time.time()
 					MODE_CURR = 2
-<<<<<<< HEAD
+					current_mode_txt = ui_font_small.render(f"Current Mode: {ACCUIRED_MODES[MODE_CURR].type}", False, (255,255,255))
 			elif event.key == pg.K_4:
 				if len(ACCUIRED_MODES) >= 4 and ACCUIRED_MODES[MODE_CURR].type == GunType.DEFAULT:
 					MODE_TIMER = time.time()
 					MODE_CURR = 3
-=======
-					MODE_TIMER = time.time()
 					current_mode_txt = ui_font_small.render(f"Current Mode: {ACCUIRED_MODES[MODE_CURR].type}", False, (255,255,255))
->>>>>>> 3e1ab004631aafc8e7d3a34c37ee5b05c14e71ad
 
 		elif event.type == pg.KEYUP:
 			if event.key == pg.K_w: player.movement["up"]      = False
