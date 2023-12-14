@@ -101,6 +101,7 @@ shoot_sound = pg.mixer.Sound("assets/shoot.wav")
 hit_sound = pg.mixer.Sound("assets/hit.wav")
 explode_sound = pg.mixer.Sound("assets/explosion.wav")
 lvl_up_sound = pg.mixer.Sound("assets/lvl_up.wav")
+disabled_noises = pg.mixer.Sound("assets/disabled.wav")
 
 # Health Bar
 health_bar = pg.Rect(10,570,400,20)
@@ -261,7 +262,7 @@ def reset_game():
 	global LVL, EXP_VAR, EXP_GAIN_NORMAL, EXP_MAX, EXP_MAX_GROWTH
 	global player, ENTITIES
 	global BOSS_WAVE, BOSS_SPAWNED, CURRENT_SPEED, CURRENT_HP, CURRENT_DAMAGE, BOSS_COUNT, CURRENT_RANGE, ENTITY_SIZE
-	global MODE_TIMER, MODE_CURR
+	global MODE_TIMER, MODE_CURR, current_mode_txt
 
 	BOSS_WAVE = False
 	BOSS_SPAWNED = False
@@ -275,6 +276,8 @@ def reset_game():
 	WAVE_COUNT = 0
 	WAVE_TIME = 10
 	ENEMY_TIMER = 5
+
+	current_mode_txt = ui_font_small.render(f"Current Mode: None", False, (255,255,255))
 
 	set_exp_var(0)
 	LVL = 0
@@ -569,16 +572,22 @@ while running:
 					MODE_CURR = 1
 					MODE_TIMER = time.time()
 					current_mode_txt = ui_font_small.render(f"Current Mode: {ACCUIRED_MODES[MODE_CURR].type}", False, (255,255,255))
+				else:
+					disabled_noises.play()
 			elif event.key == pg.K_3:
 				if len(ACCUIRED_MODES) >= 3 and ACCUIRED_MODES[MODE_CURR].type == GunType.DEFAULT:
 					MODE_TIMER = time.time()
 					MODE_CURR = 2
 					current_mode_txt = ui_font_small.render(f"Current Mode: {ACCUIRED_MODES[MODE_CURR].type}", False, (255,255,255))
+				else:
+					disabled_noises.play()
 			elif event.key == pg.K_4:
 				if len(ACCUIRED_MODES) >= 4 and ACCUIRED_MODES[MODE_CURR].type == GunType.DEFAULT:
 					MODE_TIMER = time.time()
 					MODE_CURR = 3
 					current_mode_txt = ui_font_small.render(f"Current Mode: {ACCUIRED_MODES[MODE_CURR].type}", False, (255,255,255))
+				else:
+					disabled_noises.play()
 
 		elif event.type == pg.KEYUP:
 			if event.key == pg.K_w: player.movement["up"]      = False

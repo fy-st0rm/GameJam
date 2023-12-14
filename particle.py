@@ -82,7 +82,7 @@ def grenade_check_hit(grenade: Grenade):
 		p1 = ent.rect.center
 		p2 = grenade.start_pos
 		if dist(p1, p2) <= 50:
-			ent.take_damage(60)
+			ent.take_damage(150)
 
 def grenade_collide(grenade: Grenade) -> bool:
 	for ent in ENTITIES:
@@ -101,7 +101,7 @@ def grenade_draw(surface: pg.Surface, camera: list[float, float], explode_sound:
 			g.start_pos[0] += 2 * math.cos(math.radians(g.angle))
 			g.start_pos[1] += 2 * math.sin(math.radians(g.angle))
 		else:
-			if time.time() - g.timer >= 3:
+			if time.time() - g.timer >= 1:
 				grenade_check_hit(g)
 				explode_sound.play()
 				GRENADES.remove(g)

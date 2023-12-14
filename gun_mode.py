@@ -116,7 +116,7 @@ class GrenadeLauncher(Gun):
 			damage = 30,
 			kickback = 5,
 			timeout = 5,
-			firerate = 0.2,
+			firerate = 0.5,
 			lifetime = 15
 		)
 		super().__init__(self.conf)
