@@ -121,9 +121,10 @@ class Gun:
 	def generate_trails(self):
 		assert(False, "Generate trail hasnt been implemented")
 
-	def update_trigger(self) -> Self:
+	def update_trigger(self, shoot_sound: pg.mixer.Sound) -> Self:
 		if self.fire:
 			if self.conf.timeout >= GUN_MAX_TIMEOUT:
+				shoot_sound.play()
 				self.conf.timeout = 0
 				self.conf.dist = interpolate(self.conf.dist, GUN_DIST - self.conf.kickback, 2)
 				self.draw_muzzle_flash(self.muzzle_start)

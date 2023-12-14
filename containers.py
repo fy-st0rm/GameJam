@@ -3,6 +3,7 @@ EXP_GAINS = []
 ENTITIES = []
 PARTICLES = []
 TRAILS = []
+GRENADES = []
 ACCUIRED_MODES = []
 
 

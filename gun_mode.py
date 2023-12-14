@@ -44,12 +44,12 @@ class Shawty(Gun):
 			len  = 8,
 			width = 2,
 			color = (10, 10, 10),
-			range = 100,
+			range = 150,
 			damage = 90,
 			kickback = 5,
 			timeout = 5,
-			firerate = 0.5,
-			lifetime = 10
+			firerate = 0.2,
+			lifetime = 20
 		)
 		super().__init__(self.conf)
 
@@ -90,7 +90,7 @@ class GoingBananas(Gun):
 			kickback = 5,
 			timeout = 5,
 			firerate = 2,
-			lifetime = 10
+			lifetime = 20
 		)
 		super().__init__(self.conf)
 
@@ -111,13 +111,13 @@ class GrenadeLauncher(Gun):
 			dist = GUN_DIST,
 			len  = 9,
 			width = 3,
-			color = (10, 10, 10),
+			color = (100, 100, 100),
 			range = 100,
 			damage = 30,
 			kickback = 5,
 			timeout = 5,
-			firerate = 0.3,
-			lifetime = 10
+			firerate = 0.2,
+			lifetime = 15
 		)
 		super().__init__(self.conf)
 
@@ -127,4 +127,4 @@ class GrenadeLauncher(Gun):
 			trail_start[0] + self.conf.range * math.cos(math.radians(self.angle)),
 			trail_start[1] + self.conf.range * math.sin(math.radians(self.angle))
 		]
-		self.check_hit(trail_start, trail_end)
+		grenade_add(trail_start, trail_end, self.angle)

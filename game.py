@@ -88,6 +88,15 @@ ui_font = pg.font.Font("assets/font.ttf", 50)
 ui_font_small = pg.font.Font("assets/font.ttf", 20)
 ui_font_damage = pg.font.Font("assets/font.ttf", 10)
 
+pg.mixer.music.load("assets/game_music.mp3")
+pg.mixer.music.play(loops = -1)
+pg.mixer.music.set_volume(0.3)
+
+shoot_sound = pg.mixer.Sound("assets/shoot.wav")
+hit_sound = pg.mixer.Sound("assets/hit.wav")
+explode_sound = pg.mixer.Sound("assets/explosion.wav")
+lvl_up_sound = pg.mixer.Sound("assets/lvl_up.wav")
+
 # Health Bar
 health_bar = pg.Rect(10,570,400,20)
 
@@ -165,7 +174,8 @@ player = Entity(
 	pg.Rect(0, 0, ENTITY_SIZE, ENTITY_SIZE),
 	2,
 	PLAYER_HEALTH,
-	ui_font_damage
+	ui_font_damage,
+	hit_sound
 )
 ENTITIES.append(player)
 
@@ -180,7 +190,8 @@ def spawn_enemy(positions: list[tuple[int,int]]):
 			pg.Rect(pos[0], pos[1], ENTITY_SIZE, ENTITY_SIZE),
 			2,
 			ENEMY_HEALTH,
-			ui_font_damage
+			ui_font_damage,
+			hit_sound
 		)
 		ENTITIES.append(enemy)
 	
@@ -199,7 +210,8 @@ def spawn_enemy(positions: list[tuple[int,int]]):
 				CURRENT_SPEED,
 				CURRENT_HP,
 				ui_font_damage,
-				reset_boss
+				hit_sound,
+				reset_boss = reset_boss
 			)
 			ENTITIES.append(enemy)
 			BOSS_SPAWNED = True
@@ -225,16 +237,17 @@ enemy_spawn_area = pg.Rect(
 default = Default()
 shawty = Shawty()
 going_bananas = GoingBananas()
+grenade_launcher = GrenadeLauncher()
 
-ACCUIRED_MODES.append(default)
+ACCUIRED_MODES.append(grenade_launcher)
 gun = ACCUIRED_MODES[MODE_CURR]
 
 def render_gun_modes(surface: pg.Surface):
 	for x, mode in enumerate(ACCUIRED_MODES):
 		p = x * 50
 		if x == MODE_CURR:
-			pg.draw.circle(surface, (255, 255, 255), (600 + p, 50), 23)
-		pg.draw.circle(surface, mode.conf.color, (600 + p, 50), 20)
+			pg.draw.circle(surface, (255, 255, 255), (600 + p, 550), 23)
+		pg.draw.circle(surface, mode.conf.color, (600 + p, 550), 20)
 
 
 # Reset
@@ -243,6 +256,7 @@ def reset_game():
 	global LVL, EXP_VAR, EXP_GAIN_NORMAL, EXP_MAX, EXP_MAX_GROWTH
 	global player, ENTITIES
 	global BOSS_WAVE, BOSS_SPAWNED, CURRENT_SPEED, CURRENT_HP, CURRENT_DAMAGE, BOSS_COUNT, CURRENT_RANGE, ENTITY_SIZE
+	global MODE_TIMER, MODE_CURR
 
 	BOSS_WAVE = False
 	BOSS_SPAWNED = False
@@ -271,6 +285,11 @@ def reset_game():
 
 	ENTITIES.clear()
 	ENTITIES.append(player)
+
+	MODE_TIMER = time.time()
+	MODE_CURR = 0
+	ACCUIRED_MODES.clear()
+	ACCUIRED_MODES.append(default)
 
 # Main loop
 enemy_timer = ENEMY_TIMER
@@ -356,7 +375,6 @@ while running:
 		c_hp = 0
 		for ent in ENTITIES:
 			if ent.etype == EntityType.BOSS:
-				print(BOSS_COUNT)
 				c_hp = ent.health
 				if BOSS_COUNT == 2:
 					tot_hp = BOSS_HP_1
@@ -371,15 +389,16 @@ while running:
 
 		if(get_exp_var() >= EXP_MAX):
 			LVL += 1
+			lvl_up_sound.play()
 			EXP_MAX += EXP_MAX_GROWTH
 			set_exp_var(0)
 
-		if LVL == 0:
-			if shawty not in ACCUIRED_MODES:
-				ACCUIRED_MODES.append(shawty)
-		elif LVL == 1:
-			if going_bananas not in ACCUIRED_MODES:
-				ACCUIRED_MODES.append(going_bananas)
+		if shawty not in ACCUIRED_MODES:
+			ACCUIRED_MODES.append(shawty)
+		if going_bananas not in ACCUIRED_MODES:
+			ACCUIRED_MODES.append(going_bananas)
+		if grenade_launcher not in ACCUIRED_MODES:
+			ACCUIRED_MODES.append(grenade_launcher)
 
 		# Updating entities
 		for i,ent in enumerate(ENTITIES):
@@ -438,15 +457,13 @@ while running:
 				displacement_X = (player.rect.x - ent.rect.x+0.000000000000000001)
 				displacement_Y = (player.rect.y - ent.rect.y+0.000000000000000001)
 				movement_angle = math.atan(displacement_Y/displacement_X)
-				# ent.vel[1] = 2*(abs(math.sin(movement_angle))/(displacement_Y/abs(displacement_Y)))
-				# ent.vel[0] = 2*(math.cos(movement_angle)/(displacement_X/abs(displacement_X)))
+				ent.vel[1] = 2*(abs(math.sin(movement_angle))/(displacement_Y/abs(displacement_Y)))
+				ent.vel[0] = 2*(math.cos(movement_angle)/(displacement_X/abs(displacement_X)))
 
 				# Enemy attack
 				if check_attack_range(ent, player):
 					player.take_damage(CURRENT_DAMAGE)
 
-					if player.health <= 0:
-						game = False
 
 			# Updating position
 			(
@@ -455,6 +472,9 @@ while running:
 					.update_animation()
 					.draw(display, camera)
 			)
+
+		if player.health <= 0:
+			game = False
 
 		# Gun timer
 		gun = ACCUIRED_MODES[MODE_CURR]
@@ -469,7 +489,7 @@ while running:
 			gun
 				.attach_onto(player)
 				.update_position(camera)
-				.update_trigger()
+				.update_trigger(shoot_sound)
 				.draw(display, camera)
 		)
 		
@@ -478,6 +498,7 @@ while running:
 		draw_exp(display, camera)
 
 		draw_trail(display, camera)
+		grenade_draw(display, camera, explode_sound)
 
 		screen.blit(pg.transform.scale(display, (WINDOW_WIDTH, WINDOW_HEIGHT)), (0, 0))
 		wave_info = ui_font.render(f"Wave: {WAVE_COUNT}", False, (0,255,255))
@@ -529,10 +550,16 @@ while running:
 
 			elif event.key == pg.K_2:
 				if len(ACCUIRED_MODES) >= 2 and ACCUIRED_MODES[MODE_CURR].type == GunType.DEFAULT:
+					MODE_TIMER = time.time()
 					MODE_CURR = 1
 			elif event.key == pg.K_3:
 				if len(ACCUIRED_MODES) >= 3 and ACCUIRED_MODES[MODE_CURR].type == GunType.DEFAULT:
+					MODE_TIMER = time.time()
 					MODE_CURR = 2
+			elif event.key == pg.K_4:
+				if len(ACCUIRED_MODES) >= 4 and ACCUIRED_MODES[MODE_CURR].type == GunType.DEFAULT:
+					MODE_TIMER = time.time()
+					MODE_CURR = 3
 
 		elif event.type == pg.KEYUP:
 			if event.key == pg.K_w: player.movement["up"]      = False
@@ -541,12 +568,14 @@ while running:
 			elif event.key == pg.K_d: player.movement["right"] = False
 
 		elif event.type == pg.MOUSEBUTTONDOWN:
-			if pg.mouse.get_pressed()[0]:
-				gun.fire = True
+			if game:
+				if pg.mouse.get_pressed()[0]:
+					gun.fire = True
 			
 		elif event.type == pg.MOUSEBUTTONUP:
-			if not pg.mouse.get_pressed()[0]:
-				gun.fire = False
+			if game:
+				if not pg.mouse.get_pressed()[0]:
+					gun.fire = False
 
 		# UI
 		elif event.type == pgui.UI_BUTTON_PRESSED:

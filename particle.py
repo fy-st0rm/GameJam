@@ -2,6 +2,7 @@ import pygame as pg
 from dataclasses import dataclass
 import math
 import time
+import random
 
 from containers import *
 from gmath import *
@@ -71,6 +72,47 @@ class Grenade:
 	angle: float
 	start_pos: list[float, float]
 	end_pos: list[float, float]
+	timer: float
+
+def grenade_add(start_pos: list[float, float], end_pos: list[float, float], angle: float):
+	GRENADES.append(Grenade(angle, start_pos, end_pos, time.time()))
+
+def grenade_check_hit(grenade: Grenade):
+	for ent in ENTITIES:
+		p1 = ent.rect.center
+		p2 = grenade.start_pos
+		if dist(p1, p2) <= 50:
+			ent.take_damage(60)
+
+def grenade_collide(grenade: Grenade) -> bool:
+	for ent in ENTITIES:
+		p1 = ent.rect.center
+		p2 = grenade.start_pos
+		if dist(p1, p2) <= 10:
+			return True
+	return False
+
+def grenade_draw(surface: pg.Surface, camera: list[float, float], explode_sound: pg.mixer.Sound):
+	for g in GRENADES:
+		if grenade_collide(g):
+			g.end_pos = g.start_pos
+
+		if dist(g.end_pos, g.start_pos) >= 5:
+			g.start_pos[0] += 2 * math.cos(math.radians(g.angle))
+			g.start_pos[1] += 2 * math.sin(math.radians(g.angle))
+		else:
+			if time.time() - g.timer >= 3:
+				grenade_check_hit(g)
+				explode_sound.play()
+				GRENADES.remove(g)
+
+		pg.draw.circle(surface, (255, 0, 0), (g.start_pos[0] - camera[0], g.start_pos[1] - camera[1]), 5)
+		particle_add(
+			g.start_pos.copy(),
+			(250, 180, 0),
+			[random.randint(-1, 1), random.randint(-1, 1)],
+			1, 1, 3
+		)
 
 
 def draw_dmg(surface: pg.Surface, camera: list[float, float]):

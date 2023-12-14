@@ -43,6 +43,7 @@ class Entity:
 		speed: float,
 		health: float,
 		font: pg.font.Font,
+		hit_sound: pg.mixer.Sound,
 		reset_boss = None
 	):
 		self.etype = etype
@@ -58,6 +59,7 @@ class Entity:
 			"down" : False
 		}
 		self.font = font
+		self.hit_sound = hit_sound
 
 		self.health = health
 		self.state = EntityState.IDLE
@@ -101,6 +103,8 @@ class Entity:
 
 		self.health -= damage
 		self.state = EntityState.DAMAGE
+
+		self.hit_sound.play()
 
 		# damange taken
 		damage_text = self.font.render(f"-{damage}", False, (255,0,0))
