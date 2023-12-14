@@ -26,17 +26,17 @@ BOSS_ALERT_TIMER = time.time()
 BOSS_WAVE = False
 
 BOSS_SPAWNED = False
-BOSS_COUNT = 1
+BOSS_COUNT = 2
 
 BOSS_DMG_1 = 3
 BOSS_DMG_2 = 5
 BOSS_DMG_3 = 7
 BOSS_DMG_4 = 7
 
-BOSS_HP_1 = 100
-BOSS_HP_2 = 100
-BOSS_HP_3 = 100
-BOSS_HP_4 = 100
+BOSS_HP_1 = 1000
+BOSS_HP_2 = 2000
+BOSS_HP_3 = 3000
+BOSS_HP_4 = 4000
 
 BOSS_DMG_1 = 3
 BOSS_DMG_2 = 5
@@ -290,7 +290,7 @@ def reset_boss():
 	ENTITY_SIZE = 16
 
 while running:
-	
+
 	# Calculating delta time
 	dt = time.time() - last_time
 	dt *= FPS
@@ -356,7 +356,6 @@ while running:
 		c_hp = 0
 		for ent in ENTITIES:
 			if ent.etype == EntityType.BOSS:
-				print(BOSS_COUNT)
 				c_hp = ent.health
 				if BOSS_COUNT == 2:
 					tot_hp = BOSS_HP_1
@@ -364,8 +363,8 @@ while running:
 					tot_hp = BOSS_HP_2
 				if BOSS_COUNT == 4:
 					tot_hp = BOSS_HP_3
-				if BOSS_COUNT > 4:
-					tot_hp == BOSS_HP_4
+				if BOSS_COUNT == 5:
+					tot_hp = BOSS_HP_4
 		boss_hp_bar.w = (c_hp/tot_hp) * 400
 		boss_hp_txt = ui_font_small.render(f"hp: {c_hp}/{tot_hp}",False,(0,255,70))
 
@@ -374,12 +373,12 @@ while running:
 			EXP_MAX += EXP_MAX_GROWTH
 			set_exp_var(0)
 
-		if LVL == 0:
-			if shawty not in ACCUIRED_MODES:
-				ACCUIRED_MODES.append(shawty)
-		elif LVL == 1:
-			if going_bananas not in ACCUIRED_MODES:
-				ACCUIRED_MODES.append(going_bananas)
+		#if LVL == 0:
+		if shawty not in ACCUIRED_MODES:
+			ACCUIRED_MODES.append(shawty)
+		#elif LVL == 1:
+		if going_bananas not in ACCUIRED_MODES:
+			ACCUIRED_MODES.append(going_bananas)
 
 		# Updating entities
 		for i,ent in enumerate(ENTITIES):
@@ -422,8 +421,6 @@ while running:
 						CURRENT_SPEED = BOSS_SPEED_4
 						CURRENT_RANGE = BOSS_RANGE_4
 
-
-
 					if BOSS_COUNT <= TOTAL_BOSS:
 						PREV_BOSS = WAVE_COUNT
 						BOSS_COUNT += 1
@@ -438,8 +435,8 @@ while running:
 				displacement_X = (player.rect.x - ent.rect.x+0.000000000000000001)
 				displacement_Y = (player.rect.y - ent.rect.y+0.000000000000000001)
 				movement_angle = math.atan(displacement_Y/displacement_X)
-				# ent.vel[1] = 2*(abs(math.sin(movement_angle))/(displacement_Y/abs(displacement_Y)))
-				# ent.vel[0] = 2*(math.cos(movement_angle)/(displacement_X/abs(displacement_X)))
+				ent.vel[1] = 2*(abs(math.sin(movement_angle))/(displacement_Y/abs(displacement_Y)))
+				ent.vel[0] = 2*(math.cos(movement_angle)/(displacement_X/abs(displacement_X)))
 
 				# Enemy attack
 				if check_attack_range(ent, player):
