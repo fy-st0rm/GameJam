@@ -96,6 +96,9 @@ def grenade_draw(surface: pg.Surface, camera: list[float, float], explode_sound:
 	for g in GRENADES:
 		if grenade_collide(g):
 			g.end_pos = g.start_pos
+			grenade_check_hit(g)
+			explode_sound.play()
+			GRENADES.remove(g)
 
 		if dist(g.end_pos, g.start_pos) >= 5:
 			g.start_pos[0] += 2 * math.cos(math.radians(g.angle))

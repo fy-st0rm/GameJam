@@ -255,7 +255,7 @@ def render_gun_modes(surface: pg.Surface):
 			pg.draw.circle(surface, (255, 255, 255), (600 + p, 550), 23)
 		pg.draw.circle(surface, mode.conf.color, (600 + p, 550), 20)
 
-		texture = ui_font_small.render(f"{x}", False, (255, 255, 255))
+		texture = ui_font_small.render(f"{x+1}", False, (255, 255, 255))
 		surface.blit(texture, (600 + p - 5, 540))
 
 

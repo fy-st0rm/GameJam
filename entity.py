@@ -76,7 +76,9 @@ class Entity:
 		if self.etype == EntityType.BOSS:
 			self.reset_boss()
 		
-		ENTITIES.remove(self)
+		if self in ENTITIES:
+			ENTITIES.remove(self)
+
 		pos = [self.rect.x + self.rect.w / 2, self.rect.y + self.rect.h / 2]
 
 		particle_add(
