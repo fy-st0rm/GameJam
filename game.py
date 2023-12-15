@@ -26,27 +26,27 @@ BOSS_ALERT_TIMER = time.time()
 BOSS_WAVE = False
 
 BOSS_SPAWNED = False
-BOSS_COUNT = 2
+BOSS_COUNT = 3
 
 BOSS_DMG_1 = 3
 BOSS_DMG_2 = 5
 BOSS_DMG_3 = 7
 BOSS_DMG_4 = 7
 
-BOSS_HP_1 = 1000
-BOSS_HP_2 = 2000
-BOSS_HP_3 = 3000
-BOSS_HP_4 = 4000
+BOSS_HP_1 = 10000
+BOSS_HP_2 = 20000
+BOSS_HP_3 = 9000
+BOSS_HP_4 = 50000
 
 BOSS_DMG_1 = 3
 BOSS_DMG_2 = 5
-BOSS_DMG_3 = 7
-BOSS_DMG_4 = 7
+BOSS_DMG_3 = 10
+BOSS_DMG_4 = 10
 
 BOSS_SPEED_1 = 2
 BOSS_SPEED_2 = 1
-BOSS_SPEED_3 = 0.5
-BOSS_SPEED_4 = 0.5
+BOSS_SPEED_3 = 5
+BOSS_SPEED_4 = 4
 
 BOSS_RANGE_1 = 30
 BOSS_RANGE_2 = 50
@@ -221,18 +221,18 @@ ENTITIES.append(player)
 
 # Enemy
 def spawn_enemy(positions: list[tuple[int,int]]):
-	if not BOSS_WAVE:
-		pos = random.choice(positions)
-		enemy = Entity(
-			EntityType.ENEMY,
-			sprite_sheet_get(pg.Rect(4, 0, SPRITE_SIZE, SPRITE_SIZE)),
-			pg.Rect(pos[0], pos[1], ENTITY_SIZE, ENTITY_SIZE),
-			2,
-			ENEMY_HEALTH,
-			ui_font_damage,
-			hit_sound
-		)
-		ENTITIES.append(enemy)
+# if not BOSS_WAVE:
+	pos = random.choice(positions)
+	enemy = Entity(
+		EntityType.ENEMY,
+		sprite_sheet_get(pg.Rect(4, 0, SPRITE_SIZE, SPRITE_SIZE)),
+		pg.Rect(pos[0], pos[1], ENTITY_SIZE, ENTITY_SIZE),
+		2,
+		ENEMY_HEALTH,
+		ui_font_damage,
+		hit_sound
+	)
+	ENTITIES.append(enemy)
 	
 	if BOSS_WAVE and not BOSS_INCOMMING:
 		global BOSS_SPAWNED
@@ -305,7 +305,7 @@ def reset_game():
 	CURRENT_SPEED = 2
 	CURRENT_HP = ENEMY_HEALTH
 	CURRENT_DAMAGE = 1
-	BOSS_COUNT = 1
+	BOSS_COUNT = 2
 	CURRENT_RANGE = ENEMY_RANGE
 
 	WAVE_TIMER = time.time()
