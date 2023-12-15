@@ -77,7 +77,10 @@ class Entity:
 			self.reset_boss()
 		
 		if self in ENTITIES:
-			ENTITIES.remove(self)
+			try:
+				ENTITIES.remove(self)
+			except:
+				pass
 
 		pos = [self.rect.x + self.rect.w / 2, self.rect.y + self.rect.h / 2]
 

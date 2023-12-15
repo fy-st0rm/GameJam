@@ -78,6 +78,12 @@ PREV_LVL_MODE = 0
 MODE_INFO_TIME = time.time()
 MODE_UI_TIME = 0
 
+PLAYER_DIE = False
+TITLE_IMAGE = pg.image.load('assets/title_text.png')
+CONTROLS_IMAGE = pg.image.load('assets/controls.png')
+
+PLAYER_DIE_TIME = time.time()
+
 # Inits
 pg.init()
 pg.font.init()
@@ -112,22 +118,49 @@ exp_bar = pg.Rect(10,500,400,20)
 # Boss Hp
 boss_hp_bar = pg.Rect(400,30,400,20)
 
-
+cred_y = 150
 # Main menu
 title = pgui.elements.UILabel(
-	relative_rect = pg.Rect(300, 100, 200, 50),
-	text = "Game",
+	relative_rect = pg.Rect(0, cred_y, 200, 50),
+	text = "Game By: ",
+	manager = ui_manager
+)
+title2 = pgui.elements.UILabel(
+	relative_rect = pg.Rect(0, cred_y + 50, 200, 50),
+	text = "Slok (Code)",
+	manager = ui_manager
+)
+title5 = pgui.elements.UILabel(
+	relative_rect = pg.Rect(0, cred_y + 100, 200, 50),
+	text = "Aayam (Art)(Code)",
+	manager = ui_manager
+)
+title3 = pgui.elements.UILabel(
+	relative_rect = pg.Rect(0, cred_y + 150, 200, 50),
+	text = "Robesckey (Code)",
+	manager = ui_manager
+)
+
+title4 = pgui.elements.UILabel(
+	relative_rect = pg.Rect(0, cred_y + 200, 200, 50),
+	text = "Sanjan (Art)",
+	manager = ui_manager
+)
+
+title4 = pgui.elements.UILabel(
+	relative_rect = pg.Rect(0, cred_y + 250, 200, 50),
+	text = "Subhav (Music)",
 	manager = ui_manager
 )
 
 start_button = pgui.elements.UIButton(
-	relative_rect = pg.Rect(350, 275, 100, 50),
+	relative_rect = pg.Rect(10, 500, 100, 50),
 	text = "Start",
 	manager = ui_manager
 )
 
 quit_button = pgui.elements.UIButton(
-	relative_rect = pg.Rect(350, 375, 100, 50),
+	relative_rect = pg.Rect(120, 500, 100, 50),
 	text = "Quit",
 	manager = ui_manager
 )
@@ -264,7 +297,7 @@ def reset_game():
 	global WAVE_COUNT, WAVE_TIME, WAVE_TIMER, ENEMY_TIMER
 	global LVL, EXP_VAR, EXP_GAIN_NORMAL, EXP_MAX, EXP_MAX_GROWTH
 	global player, ENTITIES
-	global BOSS_WAVE, BOSS_SPAWNED, CURRENT_SPEED, CURRENT_HP, CURRENT_DAMAGE, BOSS_COUNT, CURRENT_RANGE, ENTITY_SIZE
+	global BOSS_WAVE, BOSS_SPAWNED, CURRENT_SPEED, CURRENT_HP, CURRENT_DAMAGE, BOSS_COUNT, CURRENT_RANGE, ENTITY_SIZE, PLAYER_DIE
 	global MODE_TIMER, MODE_CURR, current_mode_txt
 
 	BOSS_WAVE = False
@@ -280,7 +313,11 @@ def reset_game():
 	WAVE_TIME = 10
 	ENEMY_TIMER = 5
 
+
+	PLAYER_DIE = False
+
 	current_mode_txt = ui_font_small.render(f"Current Mode: None", False, (255,255,255))
+	
 
 	set_exp_var(0)
 	LVL = 0
@@ -420,81 +457,81 @@ while running:
 			aquired_mode_txt = ui_font_small.render(f"",False,(255,255,255))
 			MODE_INFO_TIME = time.time()
 
-		# Updating entities
-		for i,ent in enumerate(ENTITIES):
-			if BOSS_INCOMMING:
-				if ent.etype == EntityType.ENEMY:
-					ENTITIES.pop(i)
-			if not BOSS_WAVE:
-				if (WAVE_COUNT - PREV_BOSS) >= BOSS_IN_EVERY:
-					if BOSS_COUNT <= TOTAL_BOSS:
-						BOSS_WAVE = True
-						BOSS_ALERT_TIMER = time.time()
-						BOSS_INCOMMING = True
+		if not PLAYER_DIE:
+			# Updating entities
+			for i,ent in enumerate(ENTITIES):
+				if BOSS_INCOMMING:
+					if ent.etype == EntityType.ENEMY:
+						ENTITIES.pop(i)
+				if not BOSS_WAVE:
+					if (WAVE_COUNT - PREV_BOSS) >= BOSS_IN_EVERY:
+						if BOSS_COUNT <= TOTAL_BOSS:
+							BOSS_WAVE = True
+							BOSS_ALERT_TIMER = time.time()
+							BOSS_INCOMMING = True
 
-					if BOSS_COUNT == 1:
-						CURRENT_DAMAGE = BOSS_DMG_1
-						CURRENT_HP = BOSS_HP_1
-						CURRENT_SPEED = BOSS_SPEED_1
-						CURRENT_RANGE = BOSS_RANGE_1
-						CURRENT_BOSS_IMG = BOSS_IMG_1
-					
-					if BOSS_COUNT == 2:
-						CURRENT_DAMAGE = BOSS_DMG_2
-						CURRENT_HP = BOSS_HP_2
-						CURRENT_SPEED = BOSS_SPEED_2
-						CURRENT_RANGE = BOSS_RANGE_2
-						CURRENT_BOSS_IMG = BOSS_IMG_2
-
-					if BOSS_COUNT == 3:
-						CURRENT_DAMAGE = BOSS_DMG_3
-						CURRENT_HP = BOSS_HP_3
-						CURRENT_SPEED = BOSS_SPEED_3
-						CURRENT_RANGE = BOSS_RANGE_3
-						CURRENT_BOSS_IMG = BOSS_IMG_3
-					
-					if BOSS_COUNT == 4:
-						CURRENT_BOSS_IMG = FINAL_BOSS_SPRITE
-						ENTITY_SIZE = FINAL_BOSS_H
-						CURRENT_DAMAGE = BOSS_DMG_4
-						CURRENT_HP = BOSS_HP_4
-						CURRENT_SPEED = BOSS_SPEED_4
-						CURRENT_RANGE = BOSS_RANGE_4
-
-					if BOSS_COUNT <= TOTAL_BOSS:
-						PREV_BOSS = WAVE_COUNT
-						BOSS_COUNT += 1
+						if BOSS_COUNT == 1:
+							CURRENT_DAMAGE = BOSS_DMG_1
+							CURRENT_HP = BOSS_HP_1
+							CURRENT_SPEED = BOSS_SPEED_1
+							CURRENT_RANGE = BOSS_RANGE_1
+							CURRENT_BOSS_IMG = BOSS_IMG_1
 						
-				
+						if BOSS_COUNT == 2:
+							CURRENT_DAMAGE = BOSS_DMG_2
+							CURRENT_HP = BOSS_HP_2
+							CURRENT_SPEED = BOSS_SPEED_2
+							CURRENT_RANGE = BOSS_RANGE_2
+							CURRENT_BOSS_IMG = BOSS_IMG_2
 
-			# Updating velocity
-			if ent.etype == EntityType.PLAYER:
-				ent.update_vel()
-			else:
-				# Enemy AI
-				displacement_X = (player.rect.x - ent.rect.x+0.000000000000000001)
-				displacement_Y = (player.rect.y - ent.rect.y+0.000000000000000001)
-				movement_angle = math.atan(displacement_Y/displacement_X)
-				ent.vel[1] = 2*(abs(math.sin(movement_angle))/(displacement_Y/abs(displacement_Y)))
-				ent.vel[0] = 2*(math.cos(movement_angle)/(displacement_X/abs(displacement_X)))
+						if BOSS_COUNT == 3:
+							CURRENT_DAMAGE = BOSS_DMG_3
+							CURRENT_HP = BOSS_HP_3
+							CURRENT_SPEED = BOSS_SPEED_3
+							CURRENT_RANGE = BOSS_RANGE_3
+							CURRENT_BOSS_IMG = BOSS_IMG_3
+						
+						if BOSS_COUNT == 4:
+							CURRENT_BOSS_IMG = FINAL_BOSS_SPRITE
+							ENTITY_SIZE = FINAL_BOSS_H
+							CURRENT_DAMAGE = BOSS_DMG_4
+							CURRENT_HP = BOSS_HP_4
+							CURRENT_SPEED = BOSS_SPEED_4
+							CURRENT_RANGE = BOSS_RANGE_4
 
-				# Enemy attack
-				if check_attack_range(ent, player):
-					player.take_damage(CURRENT_DAMAGE)
+						if BOSS_COUNT <= TOTAL_BOSS:
+							PREV_BOSS = WAVE_COUNT
+							BOSS_COUNT += 1
+							
+					
+
+				# Updating velocity
+				if ent.etype == EntityType.PLAYER:
+					ent.update_vel()
+				else:
+					# Enemy AI
+					displacement_X = (player.rect.x - ent.rect.x+0.000000000000000001)
+					displacement_Y = (player.rect.y - ent.rect.y+0.000000000000000001)
+					movement_angle = math.atan(displacement_Y/displacement_X)
+					ent.vel[1] = 2*(abs(math.sin(movement_angle))/(displacement_Y/abs(displacement_Y)))
+					ent.vel[0] = 2*(math.cos(movement_angle)/(displacement_X/abs(displacement_X)))
+
+					# Enemy attack
+					if check_attack_range(ent, player):
+						player.take_damage(CURRENT_DAMAGE)
 
 
-			# Updating position
-			(
-				ent
-					.update_position(dt)
-					.update_animation()
-					.draw(display, camera)
-			)
+				# Updating position
+				(
+					ent
+						.update_position(dt)
+						.update_animation()
+						.draw(display, camera)
+				)
 
-		if player.health <= 0:
-			game = False
+		
 
-		# Gun timer
+				# Gun timer
 		gun = ACCUIRED_MODES[MODE_CURR]
 		if gun.type != GunType.DEFAULT:
 			if time.time() - MODE_TIMER >= gun.conf.lifetime:
@@ -511,18 +548,27 @@ while running:
 				.update_trigger(shoot_sound)
 				.draw(display, camera)
 		)
-		
-		# Damage Showing
 		draw_dmg(display, camera)
 		draw_exp(display, camera)
 
 		draw_trail(display, camera)
 		grenade_draw(display, camera, explode_sound)
+		
+		if player.health <= 0:
+			if not PLAYER_DIE:
+				PLAYER_DIE_TIME = time.time()
+			PLAYER_DIE = True
+			
+			pass
+		# Damage Showing
+		
 
 		screen.blit(pg.transform.scale(display, (WINDOW_WIDTH, WINDOW_HEIGHT)), (0, 0))
 		wave_info = ui_font.render(f"Wave: {WAVE_COUNT}", False, (0,255,255))
 
-		boss_alert = ui_font.render(f"BOSS INCOMMING!", False, (255,0,0))
+		boss_alert = ui_font.render(f"BOSS INCOMING!", False, (255,0,0))
+		death_text = ui_font.render(f"YOU PERISHED", False, (255,0,0))
+		restart_text = ui_font_small.render(f"press any button to restart. ", False, (255,255,255))
 
 		# Drawing Text On To Screen
 		screen.blit(wave_info, (0,0))
@@ -531,6 +577,11 @@ while running:
 		screen.blit(exp_num, (10,480))
 		screen.blit(aquired_mode_txt, (300,480))
 		screen.blit(current_mode_txt, (0,80))
+
+		if PLAYER_DIE:
+			screen.blit(death_text, (300,300))
+			screen.blit(restart_text, (300,400))
+
 
 		if BOSS_WAVE:
 			screen.blit(boss_hp_txt, (400, 5))
@@ -551,6 +602,8 @@ while running:
 	else:
 		menu_show()
 		ui_surface.fill((0, 0, 0))
+		ui_surface.blit(TITLE_IMAGE, pg.Rect(0,0,200,150))
+		ui_surface.blit(CONTROLS_IMAGE, pg.Rect(400,400,200,150))
 		t = tick / 1000.0
 
 		ui_manager.update(t)
@@ -564,6 +617,9 @@ while running:
 
 		# Controls
 		elif event.type == pg.KEYDOWN:
+			if PLAYER_DIE:
+				if (time.time() - PLAYER_DIE_TIME) > 1:
+					reset_game()
 			if event.key == pg.K_w: player.movement["up"]    = True
 			elif event.key == pg.K_a: player.movement["left"]  = True
 			elif event.key == pg.K_s: player.movement["down"]  = True
@@ -599,6 +655,9 @@ while running:
 			elif event.key == pg.K_d: player.movement["right"] = False
 
 		elif event.type == pg.MOUSEBUTTONDOWN:
+			if PLAYER_DIE:
+				if (time.time() - PLAYER_DIE_TIME) > 1:
+					reset_game()
 			if game:
 				if pg.mouse.get_pressed()[0]:
 					gun.fire = True
