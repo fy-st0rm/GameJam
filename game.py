@@ -85,8 +85,13 @@ CONTROLS_IMAGE = pg.image.load('assets/controls.png')
 PLAYER_DIE_TIME = time.time()
 
 # Inits
+
 pg.init()
 pg.font.init()
+
+pygame_icon = pg.image.load('icon.ico')
+pg.display.set_icon(pygame_icon)
+pg.display.set_caption("Avoid The Taxes")
 
 screen = pg.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 display = pg.Surface((DISPLAY_WIDTH, DISPLAY_HEIGHT))
